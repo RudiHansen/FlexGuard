@@ -1,9 +1,10 @@
+using FlexGuard.CLI.Util;
 using FlexGuard.Core.Backup;
 using FlexGuard.Core.Compression;
-using FlexGuard.Core.Hashing;
 using FlexGuard.Core.Config;
-using System.Text.Json;
+using FlexGuard.Core.Hashing;
 using Spectre.Console;
+using System.Text.Json;
 
 class Program
 {
@@ -11,9 +12,12 @@ class Program
     {
         const string configPath = "config.json";
 
+        OutputHelper.Init(debugToConsole: true, debugToFile: true);
+        OutputHelper.Info("Starting FlexGuard backup...");
+
         if (!File.Exists(configPath))
         {
-            AnsiConsole.MarkupLine("[red]Configuration file not found: {0}[/]", configPath);
+            OutputHelper.Error($"Configuration file not found: {configPath}");
             return;
         }
 
@@ -22,13 +26,13 @@ class Program
 
         if (config == null)
         {
-            AnsiConsole.MarkupLine("[red]Failed to parse configuration file.[/]");
+            OutputHelper.Error("Failed to parse configuration file.");
             return;
         }
 
         if (!Directory.Exists(config.DestinationPath))
         {
-            AnsiConsole.MarkupLine($"[red]Destination root path not found: {config.DestinationPath}[/]");
+            OutputHelper.Error($"Destination root path not found: {config.DestinationPath}");
             return;
         }
 
@@ -50,6 +54,6 @@ class Program
                 ctx.Status("Backup complete");
             });
 
-        AnsiConsole.MarkupLine("[green]Backup completed successfully![/]");
+        OutputHelper.Success("Backup completed successfully!");
     }
 }

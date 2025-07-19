@@ -5,6 +5,10 @@
       "Exclude": [ "*.tmp", "bin", "obj" ]
     },
     {
+      "Path": "C:/Users/RSH/OneDrive/Billeder/0Moments/2013",
+      "Exclude": []
+    },
+    {
       "Path": "C:/Temp/Far",
       "Exclude": []
     }
