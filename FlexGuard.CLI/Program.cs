@@ -2,6 +2,7 @@ using FlexGuard.CLI.Util;
 using FlexGuard.Core.Backup;
 using FlexGuard.Core.Compression;
 using FlexGuard.Core.Config;
+using FlexGuard.Core.GroupCompression;
 using FlexGuard.Core.Hashing;
 using Spectre.Console;
 using System.Text.Json;
@@ -46,9 +47,11 @@ class Program
         Directory.CreateDirectory(fullDestPath);
 
         var compressor = new GZipCompressor();
-        //var compressor = new DeflateCompressor();
         var hasher = new Sha256Hasher();
-        var strategy = new FullBackupStrategy(compressor, hasher);
+        var groupCompressor = new ZipGroupCompressor(hasher);
+        long maxBytesPerGroup = 100 * 1024 * 1024;
+        var backupProcessor = new GroupFileBackupProcessor(groupCompressor,100,maxBytesPerGroup,OutputHelper.Info);
+        var strategy = new FullBackupStrategy(backupProcessor);
 
         var taskName = "[green]Backing up files[/]";
 

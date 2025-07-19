@@ -1,7 +1,5 @@
-using FlexGuard.Core.Compression;
-using FlexGuard.Core.Hashing;
-using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Config;
+using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Util;
 using System.Text.Json;
 
@@ -9,13 +7,11 @@ namespace FlexGuard.Core.Backup;
 
 public class FullBackupStrategy : IBackupStrategy
 {
-    private readonly ICompressor _compressor;
-    private readonly IHasher _hasher;
+    private readonly IBackupProcessor _processor;
 
-    public FullBackupStrategy(ICompressor compressor, IHasher hasher)
+    public FullBackupStrategy(IBackupProcessor processor)
     {
-        _compressor = compressor;
-        _hasher = hasher;
+        _processor = processor;
     }
 
     public void RunBackup(BackupConfig config, string destinationPath, Action<int, int, string>? reportProgress = null)
@@ -27,46 +23,13 @@ public class FullBackupStrategy : IBackupStrategy
             Files = new List<FileEntry>()
         };
 
-        int totalFiles = 0;
-        var allFiles = new List<string>();
-
         foreach (var source in config.Sources)
         {
             var files = FileEnumerator.GetFiles(source.Path, source.Exclude).ToList();
-            allFiles.AddRange(files);
-            totalFiles += files.Count;
-        }
-
-        int current = 0;
-
-        foreach (var source in config.Sources)
-        {
-            var files = FileEnumerator.GetFiles(source.Path, source.Exclude).ToList();
-
-            foreach (var file in files)
-            {
-                current++;
-                reportProgress?.Invoke(current, totalFiles, file);
-
-                string relativePath = Path.GetRelativePath(source.Path, file);
-                string hash = _hasher.ComputeHash(file);
-                string destName = $"{relativePath.Replace(Path.DirectorySeparatorChar, '_')}{_compressor.FileExtension}";
-                string destPath = Path.Combine(destinationPath, destName);
-
-                _compressor.Compress(file, destPath);
-
-                manifest.Files.Add(new FileEntry
-                {
-                    SourcePath = file,
-                    RelativePath = relativePath,
-                    Hash = hash,
-                    CompressedFileName = destName
-                });
-            }
+            _processor.ProcessFiles(files, source.Path, destinationPath, manifest.Files);
         }
 
         string manifestPath = Path.Combine(destinationPath, "manifest.json");
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
     }
-
 }
