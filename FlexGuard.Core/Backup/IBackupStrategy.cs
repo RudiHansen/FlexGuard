@@ -4,5 +4,5 @@ using FlexGuard.Core.Config;
 
 public interface IBackupStrategy
 {
-    void RunBackup(BackupConfig config, string destinationPath);
+    void RunBackup(BackupConfig config, string destinationPath, Action<int, int, string>? reportProgress = null);
 }

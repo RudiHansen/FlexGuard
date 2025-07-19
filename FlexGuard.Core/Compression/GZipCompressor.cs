@@ -4,6 +4,7 @@ namespace FlexGuard.Core.Compression;
 
 public class GZipCompressor : ICompressor
 {
+    public string FileExtension => ".gz";
     public void Compress(string inputFilePath, string outputFilePath)
     {
         using var inputFile = File.OpenRead(inputFilePath);

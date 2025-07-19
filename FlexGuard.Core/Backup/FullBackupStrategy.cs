@@ -18,7 +18,7 @@ public class FullBackupStrategy : IBackupStrategy
         _hasher = hasher;
     }
 
-    public void RunBackup(BackupConfig config, string destinationPath)
+    public void RunBackup(BackupConfig config, string destinationPath, Action<int, int, string>? reportProgress = null)
     {
         var manifest = new BackupManifest
         {
@@ -27,14 +27,30 @@ public class FullBackupStrategy : IBackupStrategy
             Files = new List<FileEntry>()
         };
 
+        int totalFiles = 0;
+        var allFiles = new List<string>();
+
         foreach (var source in config.Sources)
         {
-            var files = FileEnumerator.GetFiles(source.Path, source.Exclude);
+            var files = FileEnumerator.GetFiles(source.Path, source.Exclude).ToList();
+            allFiles.AddRange(files);
+            totalFiles += files.Count;
+        }
+
+        int current = 0;
+
+        foreach (var source in config.Sources)
+        {
+            var files = FileEnumerator.GetFiles(source.Path, source.Exclude).ToList();
+
             foreach (var file in files)
             {
+                current++;
+                reportProgress?.Invoke(current, totalFiles, file);
+
                 string relativePath = Path.GetRelativePath(source.Path, file);
                 string hash = _hasher.ComputeHash(file);
-                string destName = $"{relativePath.Replace(Path.DirectorySeparatorChar, '_')}.gz";
+                string destName = $"{relativePath.Replace(Path.DirectorySeparatorChar, '_')}{_compressor.FileExtension}";
                 string destPath = Path.Combine(destinationPath, destName);
 
                 _compressor.Compress(file, destPath);

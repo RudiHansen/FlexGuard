@@ -46,15 +46,25 @@ class Program
         Directory.CreateDirectory(fullDestPath);
 
         var compressor = new GZipCompressor();
+        //var compressor = new DeflateCompressor();
         var hasher = new Sha256Hasher();
         var strategy = new FullBackupStrategy(compressor, hasher);
 
-        AnsiConsole.Status()
-            .Start("Running backup...", ctx =>
+        var taskName = "[green]Backing up files[/]";
+
+        AnsiConsole.Progress().Start(ctx =>
+        {
+            var task = ctx.AddTask(taskName);
+
+            strategy.RunBackup(config, fullDestPath, (current, total, file) =>
             {
-                strategy.RunBackup(config, fullDestPath);
-                ctx.Status("Backup complete");
+                if (task.MaxValue != total)
+                    task.MaxValue = total;
+
+                task.Value = current;
+                task.Description = $"[green]Backing up: {Path.GetFileName(file)}[/]";
             });
+        });
 
         stopwatch.Stop();
         OutputHelper.Success("Backup completed successfully!");
