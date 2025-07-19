@@ -15,6 +15,8 @@ class Program
         OutputHelper.Init(debugToConsole: true, debugToFile: true);
         OutputHelper.Info("Starting FlexGuard backup...");
 
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
         if (!File.Exists(configPath))
         {
             OutputHelper.Error($"Configuration file not found: {configPath}");
@@ -54,6 +56,8 @@ class Program
                 ctx.Status("Backup complete");
             });
 
+        stopwatch.Stop();
         OutputHelper.Success("Backup completed successfully!");
+        OutputHelper.Info($"Backup duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
     }
 }
