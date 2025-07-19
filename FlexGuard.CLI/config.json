@@ -1,0 +1,13 @@
+{
+  "Sources": [
+    {
+      "Path": "C:/Temp/AutoCodeGenerator",
+      "Exclude": [ "*.tmp", "bin", "obj" ]
+    },
+    {
+      "Path": "C:/Temp/Far",
+      "Exclude": []
+    }
+  ],
+  "DestinationPath": "Z:/FlexGuard/2025-07-19_Full"
+}
