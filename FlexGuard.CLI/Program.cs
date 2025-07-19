@@ -39,7 +39,7 @@ class Program
             return;
         }
 
-        // Tilføj backup-type og tidspunkt
+        // Add timestamp and backup type
         string backupType = "Full";
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HHmm");
         string subfolderName = $"{timestamp}_{backupType}";
@@ -50,8 +50,6 @@ class Program
         var hasher = new Sha256Hasher();
         var groupCompressor = new GroupCompressorZip(hasher);
         long maxBytesPerGroup = 100 * 1024 * 1024;
-        var backupProcessor = new BackupProcessorGroupFile(groupCompressor,100,maxBytesPerGroup,OutputHelper.Info);
-        var strategy = new BackupStrategyFull(backupProcessor);
 
         var taskName = "[green]Backing up files[/]";
 
@@ -59,14 +57,22 @@ class Program
         {
             var task = ctx.AddTask(taskName);
 
-            strategy.RunBackup(config, fullDestPath, (current, total, file) =>
-            {
-                if (task.MaxValue != total)
-                    task.MaxValue = total;
+            var backupProcessor = new BackupProcessorGroupFile(
+                groupCompressor,
+                maxFilesPerGroup: 100,
+                maxBytesPerGroup: maxBytesPerGroup,
+                report: OutputHelper.Debug,
+                reportProgress: (current, total, file) =>
+                {
+                    if (task.MaxValue != total)
+                        task.MaxValue = total;
 
-                task.Value = current;
-                task.Description = $"[green]Backing up: {Path.GetFileName(file)}[/]";
-            });
+                    task.Value = current;
+                    task.Description = $"[green]Backing up: {Path.GetFileName(file)}[/]";
+                });
+
+            var strategy = new BackupStrategyFull(backupProcessor);
+            strategy.RunBackup(config, fullDestPath);
         });
 
         stopwatch.Stop();

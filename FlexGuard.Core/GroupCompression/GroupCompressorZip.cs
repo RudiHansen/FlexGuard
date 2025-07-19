@@ -12,7 +12,7 @@ public class GroupCompressorZip : IGroupCompressor
         _hasher = hasher;
     }
 
-    public List<GroupCompressedFile> CompressFiles(IEnumerable<string> files, string outputFilePath, string rootPath)
+    public List<GroupCompressedFile> CompressFiles(IEnumerable<string> files, string outputFilePath, string rootPath, Action<string>? reportFileProcessed = null)
     {
         var result = new List<GroupCompressedFile>();
 
@@ -21,6 +21,7 @@ public class GroupCompressorZip : IGroupCompressor
 
         foreach (var file in files)
         {
+            reportFileProcessed?.Invoke(file);
             string relativePath = Path.GetRelativePath(rootPath, file);
             string hash = _hasher.ComputeHash(file);
 

@@ -9,53 +9,50 @@ public class BackupProcessorGroupFile : IBackupProcessor
     private readonly int _maxFilesPerGroup;
     private readonly long _maxBytesPerGroup;
     private readonly Action<string>? _report;
+    private readonly Action<int, int, string>? _reportProgress;
 
-    public BackupProcessorGroupFile(IGroupCompressor groupCompressor, int maxFilesPerGroup = 100, long maxBytesPerGroup = long.MaxValue, Action<string>? report = null)
+    public BackupProcessorGroupFile(
+        IGroupCompressor groupCompressor,
+        int maxFilesPerGroup = 100,
+        long maxBytesPerGroup = long.MaxValue,
+        Action<string>? report = null,
+        Action<int, int, string>? reportProgress = null)
     {
         _groupCompressor = groupCompressor;
         _maxFilesPerGroup = maxFilesPerGroup;
         _maxBytesPerGroup = maxBytesPerGroup;
         _report = report;
+        _reportProgress = reportProgress;
     }
 
-    public void ProcessFiles(IEnumerable<string> files, string sourceRoot, string destinationFolder, List<FileEntry> manifestOut)
+    public void ProcessFiles(
+        IEnumerable<string> files,
+        string sourceRoot,
+        string destinationFolder,
+        List<FileEntry> manifestOut)
     {
         var fileList = files.ToList();
-        var groups = new List<List<string>>();
-        var currentGroup = new List<string>();
-        long currentSize = 0;
-
-        foreach (var file in fileList)
-        {
-            long fileSize = new FileInfo(file).Length;
-
-            // Start new group if limits are exceeded
-            if (currentGroup.Count >= _maxFilesPerGroup || currentSize + fileSize > _maxBytesPerGroup)
-            {
-                groups.Add(currentGroup);
-                currentGroup = new List<string>();
-                currentSize = 0;
-            }
-
-            currentGroup.Add(file);
-            currentSize += fileSize;
-        }
-
-        // Add last group if any
-        if (currentGroup.Count > 0)
-            groups.Add(currentGroup);
-
-        int groupCount = groups.Count;
+        int totalFiles = fileList.Count;
+        int current = 0;
+        int groupCount = (int)Math.Ceiling(totalFiles / (double)_maxFilesPerGroup);
 
         for (int i = 0; i < groupCount; i++)
         {
-            var groupFiles = groups[i];
+            var groupFiles = fileList
+                .Skip(i * _maxFilesPerGroup)
+                .Take(_maxFilesPerGroup)
+                .ToList();
+
             string groupName = $"group_{i + 1:0000}.zip";
             string groupOutputPath = Path.Combine(destinationFolder, groupName);
 
             _report?.Invoke($"Compressing group {i + 1}/{groupCount} to {groupName} ({groupFiles.Count} files)");
 
-            var groupResult = _groupCompressor.CompressFiles(groupFiles, groupOutputPath, sourceRoot);
+            var groupResult = _groupCompressor.CompressFiles(groupFiles, groupOutputPath, sourceRoot, (file) =>
+            {
+                current++;
+                _reportProgress?.Invoke(current, totalFiles, file); // FIX: use field, not method parameter
+            });
 
             foreach (var item in groupResult)
             {

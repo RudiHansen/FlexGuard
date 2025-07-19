@@ -9,5 +9,5 @@ public interface IGroupCompressor
     /// <param name="outputFilePath">Path to the output archive file (e.g., .zip or .fgz).</param>
     /// <param name="rootPath">Base path to calculate relative file paths from.</param>
     /// <returns>A list of compressed file metadata used for manifest and restore.</returns>
-    List<GroupCompressedFile> CompressFiles(IEnumerable<string> files, string outputFilePath, string rootPath);
+    List<GroupCompressedFile> CompressFiles(IEnumerable<string> files, string outputFilePath, string rootPath, Action<string>? reportFileProcessed = null);
 }
