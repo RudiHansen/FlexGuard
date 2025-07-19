@@ -2,8 +2,8 @@ namespace FlexGuard.Core.Manifest;
 
 public class FileEntry
 {
-    public string SourcePath { get; set; }
-    public string RelativePath { get; set; }
-    public string Hash { get; set; }
-    public string CompressedFileName { get; set; }
+    public required string SourcePath { get; set; }
+    public required string RelativePath { get; set; }
+    public required string Hash { get; set; }
+    public required string CompressedFileName { get; set; }
 }
