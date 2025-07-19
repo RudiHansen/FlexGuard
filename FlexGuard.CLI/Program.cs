@@ -26,6 +26,19 @@ class Program
             return;
         }
 
+        if (!Directory.Exists(config.DestinationPath))
+        {
+            AnsiConsole.MarkupLine($"[red]Destination root path not found: {config.DestinationPath}[/]");
+            return;
+        }
+
+        // Tilføj backup-type og tidspunkt
+        string backupType = "Full";
+        string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HHmm");
+        string subfolderName = $"{timestamp}_{backupType}";
+        string fullDestPath = Path.Combine(config.DestinationPath, subfolderName);
+        Directory.CreateDirectory(fullDestPath);
+
         var compressor = new GZipCompressor();
         var hasher = new Sha256Hasher();
         var strategy = new FullBackupStrategy(compressor, hasher);
@@ -33,7 +46,7 @@ class Program
         AnsiConsole.Status()
             .Start("Running backup...", ctx =>
             {
-                strategy.RunBackup(config);
+                strategy.RunBackup(config, fullDestPath);
                 ctx.Status("Backup complete");
             });
 

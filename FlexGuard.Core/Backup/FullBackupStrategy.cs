@@ -18,7 +18,7 @@ public class FullBackupStrategy : IBackupStrategy
         _hasher = hasher;
     }
 
-    public void RunBackup(BackupConfig config)
+    public void RunBackup(BackupConfig config, string destinationPath)
     {
         var manifest = new BackupManifest
         {
@@ -35,7 +35,7 @@ public class FullBackupStrategy : IBackupStrategy
                 string relativePath = Path.GetRelativePath(source.Path, file);
                 string hash = _hasher.ComputeHash(file);
                 string destName = $"{relativePath.Replace(Path.DirectorySeparatorChar, '_')}.gz";
-                string destPath = Path.Combine(config.DestinationPath, destName);
+                string destPath = Path.Combine(destinationPath, destName);
 
                 _compressor.Compress(file, destPath);
 
@@ -49,7 +49,8 @@ public class FullBackupStrategy : IBackupStrategy
             }
         }
 
-        string manifestPath = Path.Combine(config.DestinationPath, "manifest.json");
+        string manifestPath = Path.Combine(destinationPath, "manifest.json");
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
     }
+
 }
