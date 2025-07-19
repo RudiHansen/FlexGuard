@@ -46,12 +46,12 @@ class Program
         string fullDestPath = Path.Combine(config.DestinationPath, subfolderName);
         Directory.CreateDirectory(fullDestPath);
 
-        var compressor = new GZipCompressor();
+        var compressor = new CompressorGZip();
         var hasher = new Sha256Hasher();
-        var groupCompressor = new ZipGroupCompressor(hasher);
+        var groupCompressor = new GroupCompressorZip(hasher);
         long maxBytesPerGroup = 100 * 1024 * 1024;
-        var backupProcessor = new GroupFileBackupProcessor(groupCompressor,100,maxBytesPerGroup,OutputHelper.Info);
-        var strategy = new FullBackupStrategy(backupProcessor);
+        var backupProcessor = new BackupProcessorGroupFile(groupCompressor,100,maxBytesPerGroup,OutputHelper.Info);
+        var strategy = new BackupStrategyFull(backupProcessor);
 
         var taskName = "[green]Backing up files[/]";
 

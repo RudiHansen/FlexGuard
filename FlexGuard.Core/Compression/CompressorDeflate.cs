@@ -2,7 +2,7 @@
 
 namespace FlexGuard.Core.Compression;
 
-public class DeflateCompressor : ICompressor
+public class CompressorDeflate : ICompressor
 {
     public string FileExtension => ".def";
     public void Compress(string inputFilePath, string outputFilePath)

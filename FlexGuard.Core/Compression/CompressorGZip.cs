@@ -2,7 +2,7 @@ using System.IO.Compression;
 
 namespace FlexGuard.Core.Compression;
 
-public class GZipCompressor : ICompressor
+public class CompressorGZip : ICompressor
 {
     public string FileExtension => ".gz";
     public void Compress(string inputFilePath, string outputFilePath)

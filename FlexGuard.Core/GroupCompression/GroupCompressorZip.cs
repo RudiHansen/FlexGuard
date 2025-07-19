@@ -3,11 +3,11 @@ using FlexGuard.Core.Hashing;
 
 namespace FlexGuard.Core.GroupCompression;
 
-public class ZipGroupCompressor : IGroupCompressor
+public class GroupCompressorZip : IGroupCompressor
 {
     private readonly IHasher _hasher;
 
-    public ZipGroupCompressor(IHasher hasher)
+    public GroupCompressorZip(IHasher hasher)
     {
         _hasher = hasher;
     }
