@@ -1,18 +1,25 @@
 ﻿using System.IO.Compression;
 using FlexGuard.Core.Hashing;
+using FlexGuard.Core.Reporting;
 
 namespace FlexGuard.Core.GroupCompression;
 
 public class GroupCompressorZip : IGroupCompressor
 {
     private readonly IHasher _hasher;
+    private readonly IMessageReporter? _reporter;
 
-    public GroupCompressorZip(IHasher hasher)
+    public GroupCompressorZip(IHasher hasher, IMessageReporter? reporter = null)
     {
         _hasher = hasher;
+        _reporter = reporter;
     }
 
-    public List<GroupCompressedFile> CompressFiles(IEnumerable<string> files, string outputFilePath, string rootPath, Action<string>? reportFileProcessed = null)
+    public List<GroupCompressedFile> CompressFiles(
+        IEnumerable<string> files,
+        string outputFilePath,
+        string rootPath,
+        Action<string>? reportFileProcessed = null)
     {
         var result = new List<GroupCompressedFile>();
 
@@ -21,18 +28,27 @@ public class GroupCompressorZip : IGroupCompressor
 
         foreach (var file in files)
         {
-            reportFileProcessed?.Invoke(file);
-            string relativePath = Path.GetRelativePath(rootPath, file);
-            string hash = _hasher.ComputeHash(file);
-
-            archive.CreateEntryFromFile(file, relativePath, CompressionLevel.Optimal);
-
-            result.Add(new GroupCompressedFile
+            try
             {
-                SourcePath = file,
-                RelativePath = relativePath,
-                Hash = hash
-            });
+                string relativePath = Path.GetRelativePath(rootPath, file);
+                string hash = _hasher.ComputeHash(file); // May throw
+
+                archive.CreateEntryFromFile(file, relativePath, CompressionLevel.Optimal); // May throw
+
+                result.Add(new GroupCompressedFile
+                {
+                    SourcePath = file,
+                    RelativePath = relativePath,
+                    Hash = hash
+                });
+
+                reportFileProcessed?.Invoke(file);
+            }
+            catch (Exception ex)
+            {
+                _reporter?.Warning($"Skipped file '{file}': {ex.Message}");
+                continue;
+            }
         }
 
         return result;
