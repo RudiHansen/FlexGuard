@@ -49,7 +49,7 @@ class Program
         var compressor = new CompressorGZip();
         var hasher = new Sha256Hasher();
         var groupCompressor = new GroupCompressorZip(hasher, reporter);
-        long maxBytesPerGroup = 100 * 1024 * 1024;
+        long maxBytesPerGroup = 512 * 1024 * 1024;
 
         AnsiConsole.Progress().Start(ctx =>
         {
@@ -66,7 +66,7 @@ class Program
 
             var backupProcessor = new BackupProcessorGroupFile(
                 groupCompressor,
-                maxFilesPerGroup: 100,
+                maxFilesPerGroup: 1000,
                 maxBytesPerGroup: maxBytesPerGroup,
                 reporter: progressReporter);
 
