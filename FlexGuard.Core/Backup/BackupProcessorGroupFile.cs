@@ -85,13 +85,25 @@ public class BackupProcessorGroupFile : IBackupProcessor
 
         foreach (var item in groupResult)
         {
-            manifestOut.Add(new FileEntry
+            try
             {
-                SourcePath = item.SourcePath,
-                RelativePath = item.RelativePath,
-                Hash = item.Hash,
-                CompressedFileName = groupName
-            });
+                var info = new FileInfo(item.SourcePath);
+                manifestOut.Add(new FileEntry
+                {
+                    SourcePath = item.SourcePath,
+                    RelativePath = item.RelativePath,
+                    Hash = item.Hash,
+                    CompressedFileName = groupName,
+                    FileSize = info.Length,
+                    LastWriteTimeUtc = info.LastWriteTimeUtc
+                });
+            }
+            catch (Exception ex)
+            {
+                _reporter.Warning($"Could not retrieve file info for metadata: {item.SourcePath} ({ex.Message})");
+                // Du kan vælge at fortsætte uden metadata, men her dropper vi entry helt:
+                continue;
+            }
         }
     }
 }
