@@ -52,27 +52,7 @@ class Program
         var compressor = new CompressorGZip();
         var hasher = new Sha256Hasher();
         var groupCompressor = new GroupCompressorZip(hasher, reporter);
-        long maxBytesPerGroup = 1024 * 1024 * 1024;
-
-        // Load previous manifest if diffMode
-        BackupManifest? oldManifest = null;
-        if (diffMode)
-        {
-            if (!File.Exists(diffManifestFile))
-            {
-                reporter.Error($"Diff manifest file not found: {diffManifestFile}");
-                return;
-            }
-
-            var oldManifestJson = File.ReadAllText(diffManifestFile);
-            oldManifest = JsonSerializer.Deserialize<BackupManifest>(oldManifestJson);
-
-            if (oldManifest == null)
-            {
-                reporter.Error("Failed to parse diff manifest file.");
-                return;
-            }
-        }
+        long maxBytesPerGroup = 512 * 1024 * 1024;
 
         AnsiConsole.Progress().Start(ctx =>
         {
@@ -93,9 +73,31 @@ class Program
                 maxBytesPerGroup: maxBytesPerGroup,
                 reporter: progressReporter);
 
-            IBackupStrategy strategy = diffMode
-                ? new BackupStrategyDiff(backupProcessor, oldManifest!, progressReporter)
-                : new BackupStrategyFull(backupProcessor, progressReporter);
+            IBackupStrategy strategy;
+
+            if (diffMode)
+            {
+                if (!File.Exists(diffManifestFile))
+                {
+                    reporter.Error($"Diff manifest file not found: {diffManifestFile}");
+                    return;
+                }
+
+                var oldManifestJson = File.ReadAllText(diffManifestFile);
+                var oldManifest = JsonSerializer.Deserialize<BackupManifest>(oldManifestJson);
+
+                if (oldManifest == null)
+                {
+                    reporter.Error("Failed to parse diff manifest file.");
+                    return;
+                }
+
+                strategy = new BackupStrategyDiff(backupProcessor, oldManifest, progressReporter);
+            }
+            else
+            {
+                strategy = new BackupStrategyFull(backupProcessor, progressReporter);
+            }
 
             strategy.RunBackup(config, fullDestPath, progressReporter);
         });
