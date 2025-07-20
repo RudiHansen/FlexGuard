@@ -3,6 +3,7 @@ using FlexGuard.Core.Compression;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.GroupCompression;
 using FlexGuard.Core.Hashing;
+using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Reporting;
 using Spectre.Console;
 using System.Text.Json;
@@ -12,6 +13,8 @@ class Program
     static void Main(string[] args)
     {
         const string configPath = "config.json";
+        const bool diffMode = true;
+        const string diffManifestFile = "Z:/FlexGuard/2025-07-20T1338_Full/manifest.json";
 
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
@@ -39,8 +42,8 @@ class Program
             return;
         }
 
-        // Add timestamp and backup type
-        string backupType = "Full";
+        // Determine backup type
+        string backupType = diffMode ? "Diff" : "Full";
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HHmm");
         string subfolderName = $"{timestamp}_{backupType}";
         string fullDestPath = Path.Combine(config.DestinationPath, subfolderName);
@@ -49,11 +52,31 @@ class Program
         var compressor = new CompressorGZip();
         var hasher = new Sha256Hasher();
         var groupCompressor = new GroupCompressorZip(hasher, reporter);
-        long maxBytesPerGroup = 512 * 1024 * 1024;
+        long maxBytesPerGroup = 1024 * 1024 * 1024;
+
+        // Load previous manifest if diffMode
+        BackupManifest? oldManifest = null;
+        if (diffMode)
+        {
+            if (!File.Exists(diffManifestFile))
+            {
+                reporter.Error($"Diff manifest file not found: {diffManifestFile}");
+                return;
+            }
+
+            var oldManifestJson = File.ReadAllText(diffManifestFile);
+            oldManifest = JsonSerializer.Deserialize<BackupManifest>(oldManifestJson);
+
+            if (oldManifest == null)
+            {
+                reporter.Error("Failed to parse diff manifest file.");
+                return;
+            }
+        }
 
         AnsiConsole.Progress().Start(ctx =>
         {
-            var task = ctx.AddTask("[green]Backing up files[/]");
+            var task = ctx.AddTask($"[green]Backing up ({backupType})[/]");
 
             var progressReporter = new MessageReporterWithProgress(reporter, (current, total, file) =>
             {
@@ -70,12 +93,15 @@ class Program
                 maxBytesPerGroup: maxBytesPerGroup,
                 reporter: progressReporter);
 
-            var strategy = new BackupStrategyFull(backupProcessor, progressReporter);
+            IBackupStrategy strategy = diffMode
+                ? new BackupStrategyDiff(backupProcessor, oldManifest!, progressReporter)
+                : new BackupStrategyFull(backupProcessor, progressReporter);
+
             strategy.RunBackup(config, fullDestPath, progressReporter);
         });
 
         stopwatch.Stop();
-        reporter.Success("Backup completed successfully!");
+        reporter.Success($"{backupType} backup completed successfully!");
         reporter.Info($"Backup duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
     }
 }
