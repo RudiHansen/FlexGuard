@@ -1,5 +1,6 @@
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Manifest;
+using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 using System.Text.Json;
 
@@ -8,13 +9,15 @@ namespace FlexGuard.Core.Backup;
 public class BackupStrategyFull : IBackupStrategy
 {
     private readonly IBackupProcessor _processor;
+    private readonly IMessageReporter _reporter;
 
-    public BackupStrategyFull(IBackupProcessor processor)
+    public BackupStrategyFull(IBackupProcessor processor, IMessageReporter reporter)
     {
         _processor = processor;
+        _reporter = reporter;
     }
 
-    public void RunBackup(BackupConfig config, string destinationPath, Action<int, int, string>? reportProgress = null)
+    public void RunBackup(BackupConfig config, string destinationPath, IMessageReporter reporter)
     {
         var manifest = new BackupManifest
         {
@@ -26,7 +29,7 @@ public class BackupStrategyFull : IBackupStrategy
         foreach (var source in config.Sources)
         {
             var files = FileEnumerator.GetFiles(source.Path, source.Exclude).ToList();
-            _processor.ProcessFiles(files, source.Path, destinationPath, manifest.Files);
+            _processor.ProcessFiles(files, source.Path, destinationPath, manifest.Files, _reporter);
         }
 
         string manifestPath = Path.Combine(destinationPath, "manifest.json");

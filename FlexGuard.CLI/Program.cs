@@ -1,9 +1,9 @@
-using FlexGuard.CLI.Util;
 using FlexGuard.Core.Backup;
 using FlexGuard.Core.Compression;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.GroupCompression;
 using FlexGuard.Core.Hashing;
+using FlexGuard.Core.Reporting;
 using Spectre.Console;
 using System.Text.Json;
 
@@ -13,14 +13,14 @@ class Program
     {
         const string configPath = "config.json";
 
-        OutputHelper.Init(debugToConsole: true, debugToFile: true);
-        OutputHelper.Info("Starting FlexGuard backup...");
+        var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
+        reporter.Info("Starting FlexGuard backup...");
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         if (!File.Exists(configPath))
         {
-            OutputHelper.Error($"Configuration file not found: {configPath}");
+            reporter.Error($"Configuration file not found: {configPath}");
             return;
         }
 
@@ -29,13 +29,13 @@ class Program
 
         if (config == null)
         {
-            OutputHelper.Error("Failed to parse configuration file.");
+            reporter.Error("Failed to parse configuration file.");
             return;
         }
 
         if (!Directory.Exists(config.DestinationPath))
         {
-            OutputHelper.Error($"Destination root path not found: {config.DestinationPath}");
+            reporter.Error($"Destination root path not found: {config.DestinationPath}");
             return;
         }
 
@@ -51,32 +51,31 @@ class Program
         var groupCompressor = new GroupCompressorZip(hasher);
         long maxBytesPerGroup = 100 * 1024 * 1024;
 
-        var taskName = "[green]Backing up files[/]";
-
         AnsiConsole.Progress().Start(ctx =>
         {
-            var task = ctx.AddTask(taskName);
+            var task = ctx.AddTask("[green]Backing up files[/]");
+
+            var progressReporter = new MessageReporterWithProgress(reporter, (current, total, file) =>
+            {
+                if (task.MaxValue != total)
+                    task.MaxValue = total;
+
+                task.Value = current;
+                task.Description = $"[green]Backing up: {Path.GetFileName(file)}[/]";
+            });
 
             var backupProcessor = new BackupProcessorGroupFile(
                 groupCompressor,
                 maxFilesPerGroup: 100,
                 maxBytesPerGroup: maxBytesPerGroup,
-                report: OutputHelper.Debug,
-                reportProgress: (current, total, file) =>
-                {
-                    if (task.MaxValue != total)
-                        task.MaxValue = total;
+                reporter: progressReporter);
 
-                    task.Value = current;
-                    task.Description = $"[green]Backing up: {Path.GetFileName(file)}[/]";
-                });
-
-            var strategy = new BackupStrategyFull(backupProcessor);
-            strategy.RunBackup(config, fullDestPath);
+            var strategy = new BackupStrategyFull(backupProcessor, progressReporter);
+            strategy.RunBackup(config, fullDestPath, progressReporter);
         });
 
         stopwatch.Stop();
-        OutputHelper.Success("Backup completed successfully!");
-        OutputHelper.Info($"Backup duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
+        reporter.Success("Backup completed successfully!");
+        reporter.Info($"Backup duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
     }
 }
