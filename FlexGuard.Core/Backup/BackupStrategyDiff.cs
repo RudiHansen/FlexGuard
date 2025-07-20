@@ -18,7 +18,7 @@ public class BackupStrategyDiff : IBackupStrategy
         _reporter = reporter;
 
         _previousEntries = previousManifest.Files?
-            .ToDictionary(f => f.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(f => NormalizePath(f.RelativePath))
             ?? new();
     }
 
@@ -52,8 +52,9 @@ public class BackupStrategyDiff : IBackupStrategy
         {
             var info = new FileInfo(filePath);
             var relativePath = Path.GetRelativePath(sourceRoot, filePath);
+            var normalizedPath = NormalizePath(relativePath);
 
-            if (_previousEntries.TryGetValue(relativePath, out var oldEntry))
+            if (_previousEntries.TryGetValue(normalizedPath, out var oldEntry))
             {
                 return oldEntry.FileSize != info.Length ||
                        oldEntry.LastWriteTimeUtc != info.LastWriteTimeUtc;
@@ -67,4 +68,7 @@ public class BackupStrategyDiff : IBackupStrategy
             return true;
         }
     }
+
+    private static string NormalizePath(string path) =>
+        path.Replace('\\', '/').ToLowerInvariant();
 }

@@ -14,7 +14,8 @@ class Program
     {
         const string configPath = "config.json";
         const bool diffMode = true;
-        const string diffManifestFile = "Z:/FlexGuard/2025-07-20T1338_Full/manifest.json";
+        //const string diffManifestFile = "Z:/FlexGuard/2025-07-20T1338_Full/manifest.json";
+        const string diffManifestFile = "Z:/FlexGuard/2025-07-20T1218_Full/manifest.json";
 
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
