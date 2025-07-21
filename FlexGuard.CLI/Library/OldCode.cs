@@ -36,7 +36,7 @@ namespace FlexGuard.CLI.Library
             }
 
             var configJson = File.ReadAllText(configPath);
-            var config = JsonSerializer.Deserialize<BackupConfig>(configJson);
+            var config = JsonSerializer.Deserialize<BackupJobConfig>(configJson);
 
             if (config == null)
             {

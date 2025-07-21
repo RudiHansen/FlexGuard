@@ -22,7 +22,7 @@ public class BackupStrategyDiff : IBackupStrategy
             ?? new();
     }
 
-    public void RunBackup(BackupConfig config, string destinationPath, IMessageReporter reporter)
+    public void RunBackup(BackupJobConfig config, string destinationPath, IMessageReporter reporter)
     {
         var manifest = new BackupManifest
         {

@@ -17,7 +17,7 @@ public class BackupStrategyFull : IBackupStrategy
         _reporter = reporter;
     }
 
-    public void RunBackup(BackupConfig config, string destinationPath, IMessageReporter reporter)
+    public void RunBackup(BackupJobConfig config, string destinationPath, IMessageReporter reporter)
     {
         var manifest = new BackupManifest
         {

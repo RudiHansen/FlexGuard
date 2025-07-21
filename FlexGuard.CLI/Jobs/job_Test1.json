@@ -1,0 +1,18 @@
+{
+  "JobName": "Test1",
+  "Sources": [
+    {
+      "Path": "C:/Temp/AutoCodeGenerator",
+      "Exclude": [ "*.tmp", "bin", "obj" ]
+    },
+    {
+      "Path": "C:/Users/RSH/OneDrive/Billeder/0Moments/2013",
+      "Exclude": []
+    },
+    {
+      "Path": "C:/Temp/Far",
+      "Exclude": []
+    }
+  ],
+  "DestinationPath": "Z:/FlexGuard"
+}
