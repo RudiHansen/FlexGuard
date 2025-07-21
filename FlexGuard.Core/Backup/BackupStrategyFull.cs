@@ -28,7 +28,7 @@ public class BackupStrategyFull : IBackupStrategy
 
         foreach (var source in config.Sources)
         {
-            var files = FileEnumerator.GetFiles(source.Path, source.Exclude).ToList();
+            var files = FileEnumerator.GetFiles(source.Path, source.Exclude, reporter).ToList();
             _processor.ProcessFiles(files, source.Path, destinationPath, manifest.Files, _reporter);
         }
 

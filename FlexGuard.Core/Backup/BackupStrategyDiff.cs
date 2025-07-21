@@ -33,7 +33,7 @@ public class BackupStrategyDiff : IBackupStrategy
 
         foreach (var source in config.Sources)
         {
-            var files = FileEnumerator.GetFiles(source.Path, source.Exclude).ToList();
+            var files = FileEnumerator.GetFiles(source.Path, source.Exclude,reporter).ToList();
 
             var diffFiles = files
                 .Where(file => ShouldIncludeFile(file, source.Path))

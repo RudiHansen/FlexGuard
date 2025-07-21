@@ -18,7 +18,7 @@ class Program
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         reporter.Info("Create backup file list...");
-        var allFiles = FileCollector.CollectFiles(jobConfig);
+        var allFiles = FileCollector.CollectFiles(jobConfig,reporter);
 
         stopwatch.Stop();
         reporter.Info($"Found {allFiles.Count} files to back up.");
