@@ -19,7 +19,15 @@ class Program
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         reporter.Info("Create backup file list...");
-        var allFiles = FileCollector.CollectFiles(jobConfig,reporter);
+        DateTime? lastBackupTime = null;
+
+        if (options.Mode == OperationMode.DifferentialBackup)
+        {
+            // set lastBackupTime manually for testing purposes
+            lastBackupTime = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+        }
+
+        var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
 
         stopwatch.Stop();
         reporter.Info($"Found {allFiles.Count} files to back up.");
