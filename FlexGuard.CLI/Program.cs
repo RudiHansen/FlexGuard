@@ -12,6 +12,9 @@ class Program
 {
     static void Main(string[] args)
     {
+    }
+    static void OldFunktionality()
+    {
         const string configPath = "config.json";
         const bool diffMode = true;
         const string diffManifestFile = "Z:/FlexGuard/2025-07-20T1338_Full/manifest.json";
