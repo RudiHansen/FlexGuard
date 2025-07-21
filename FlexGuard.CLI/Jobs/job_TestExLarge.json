@@ -1,0 +1,10 @@
+{
+  "JobName": "TestExLarge",
+  "Sources": [
+    {
+      "Path": "C:/",
+      "Exclude": [ "*.tmp"]
+    }
+  ],
+  "DestinationPath": "Z:/FlexGuard"
+}

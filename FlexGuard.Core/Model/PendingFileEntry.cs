@@ -1,0 +1,9 @@
+﻿namespace FlexGuard.Core.Model;
+
+public class PendingFileEntry
+{
+    public required string SourcePath { get; set; }
+    public required string RelativePath { get; set; }
+    public required long FileSize { get; set; }
+    public required DateTime LastWriteTimeUtc { get; set; }
+}
