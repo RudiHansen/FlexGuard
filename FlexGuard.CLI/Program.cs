@@ -1,5 +1,6 @@
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
+using FlexGuard.Core.Processing;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 
@@ -10,8 +11,8 @@ class Program
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
-        var options = new ProgramOptions("Test1", OperationMode.FullBackup);
-        //var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
+        //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
+        var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
 
@@ -32,6 +33,14 @@ class Program
         stopwatch.Stop();
         reporter.Info($"Found {allFiles.Count} files to back up.");
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
+
+        stopwatch.Restart();
+        reporter.Info("Grouping files into chunks...");
+        var fileGroups = ChunkBuilder.BuildGroups(allFiles, options);
+        reporter.Info($"Created {fileGroups.Count} file groups.");
+        stopwatch.Stop();
+        reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
+
     }
-    
+
 }
