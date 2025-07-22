@@ -19,6 +19,7 @@ public class BackupStrategyFull : IBackupStrategy
 
     public void RunBackup(BackupJobConfig config, string destinationPath, IMessageReporter reporter)
     {
+        /*
         var manifest = new BackupManifest
         {
             Type = "Full",
@@ -34,5 +35,6 @@ public class BackupStrategyFull : IBackupStrategy
 
         string manifestPath = Path.Combine(destinationPath, "manifest.json");
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+        */
     }
 }

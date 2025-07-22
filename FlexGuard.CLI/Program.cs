@@ -45,6 +45,7 @@ class Program
 
         var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
         var registryManager = new BackupRegistryManager(options.JobName, localJobsFolder);
+        var manifestBuilder = new BackupManifestBuilder(options.JobName, options.Mode);
 
         stopwatch.Restart();
         reporter.Info("Processing file groups...");
@@ -53,14 +54,17 @@ class Program
         foreach (var group in fileGroups)
         {
             reporter.Info($"Processing group {current} of {fileGroups.Count} with {group.Files.Count} files ({group.TotalSize / 1024 / 1024} MB)...");
-            ChunkProcessor.Process(group, backupFolderPath, options, reporter);
+            ChunkProcessor.Process(group, backupFolderPath, options, reporter, manifestBuilder);
             current++;
         }
         stopwatch.Stop();
         reporter.Info($"Processed {fileGroups.Count} groups.");
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
-        registryManager.AddEntry(DateTime.Now, options.Mode, "manifestfilnavn.json");
+
+        string manifestFileName = manifestBuilder.Save(localJobsFolder);
+        registryManager.AddEntry(DateTime.UtcNow, options.Mode, manifestFileName);
         registryManager.Save();
+
 
         reporter.Success("Backup process completed successfully.");
 

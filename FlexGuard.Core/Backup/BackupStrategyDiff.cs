@@ -24,6 +24,7 @@ public class BackupStrategyDiff : IBackupStrategy
 
     public void RunBackup(BackupJobConfig config, string destinationPath, IMessageReporter reporter)
     {
+        /*
         var manifest = new BackupManifest
         {
             Type = "Diff",
@@ -44,6 +45,8 @@ public class BackupStrategyDiff : IBackupStrategy
 
         string manifestPath = Path.Combine(destinationPath, "manifest.json");
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+        */
+
     }
 
     private bool ShouldIncludeFile(string filePath, string sourceRoot)
