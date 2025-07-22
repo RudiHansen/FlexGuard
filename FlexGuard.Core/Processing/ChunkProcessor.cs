@@ -9,11 +9,11 @@ using System.Security.Cryptography;
 public static class ChunkProcessor
 {
     public static void Process(
-        FileGroup group,
-        string backupFolderPath,
-        ProgramOptions options,
-        IMessageReporter reporter,
-        BackupManifestBuilder manifestBuilder)
+    FileGroup group,
+    string backupFolderPath,
+    ProgramOptions options,
+    IMessageReporter reporter,
+    BackupManifestBuilder manifestBuilder)
     {
         var chunkFileName = $"{group.Index:D4}.fgchunk";
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
@@ -23,36 +23,51 @@ public static class ChunkProcessor
 
         try
         {
-            using var zipBuffer = new MemoryStream(); // ZIP data in RAM
+            using var zipBuffer = new MemoryStream();
             using (var archive = new ZipArchive(zipBuffer, ZipArchiveMode.Create, leaveOpen: true))
             {
                 foreach (var file in group.Files)
                 {
                     try
                     {
+                        // Læs filens bytes
                         using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                         using var ms = new MemoryStream();
                         sourceStream.CopyTo(ms);
                         var fileBytes = ms.ToArray();
 
+                        // Beregn hash
                         string hash;
                         using (var sha256 = SHA256.Create())
                         {
                             hash = Convert.ToHexString(sha256.ComputeHash(fileBytes));
                         }
 
+                        // Beregn komprimeringsforhold separat
+                        long compressedSize;
+                        using (var tempCompressed = new MemoryStream())
+                        {
+                            using (var zip = new ZipArchive(tempCompressed, ZipArchiveMode.Create, leaveOpen: true))
+                            {
+                                var tempEntry = zip.CreateEntry("dummy", CompressionLevel.Optimal);
+                                using var tempStream = tempEntry.Open();
+                                tempStream.Write(fileBytes, 0, fileBytes.Length);
+                            }
+                            compressedSize = tempCompressed.Length;
+                        }
+
+                        double compressionRatio = file.FileSize > 0
+                            ? Math.Round(100.0 * (file.FileSize - compressedSize) / file.FileSize, 2)
+                            : 0;
+
+                        // Tilføj rigtig entry til arkiv
                         var entry = archive.CreateEntry(file.RelativePath, CompressionLevel.Optimal);
                         using (var entryStream = entry.Open())
                         {
-                            ms.Position = 0;
-                            ms.CopyTo(entryStream);
+                            entryStream.Write(fileBytes, 0, fileBytes.Length);
                         }
 
-                        // Her er det OK at hente CompressedLength
-                        double compressionRatio = file.FileSize > 0
-                            ? Math.Round(100.0 * (file.FileSize - entry.CompressedLength) / file.FileSize, 2)
-                            : 0;
-
+                        // Tilføj til manifest
                         manifestBuilder.AddFile(new FileEntry
                         {
                             RelativePath = file.RelativePath,
@@ -71,7 +86,7 @@ public static class ChunkProcessor
                 }
             }
 
-            // Når zipBuffer er færdigskrevet, kan vi gzippe det og skrive til disk
+            // Gem chunk til disk med GZip
             zipBuffer.Position = 0;
             using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
             using var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal);
