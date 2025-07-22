@@ -9,7 +9,6 @@ class Program
 {
     static void Main(string[] args)
     {
-        
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
