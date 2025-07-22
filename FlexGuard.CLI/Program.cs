@@ -1,6 +1,7 @@
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Processing;
+using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 using System.Text.RegularExpressions;
@@ -42,19 +43,23 @@ class Program
         stopwatch.Stop();
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
+        var registryManager = new BackupRegistryManager(options.JobName, Path.Combine(jobConfig.DestinationPath, options.JobName));
 
         stopwatch.Restart();
         reporter.Info("Processing file groups...");
+        string backupFolderPath = Path.Combine(jobConfig.DestinationPath, BackupPathHelper.GetBackupFolderName(options.Mode, DateTime.Now));
         int current = 1;
         foreach (var group in fileGroups)
         {
             reporter.Info($"Processing group {current} of {fileGroups.Count} with {group.Files.Count} files ({group.TotalSize / 1024 / 1024} MB)...");
-            ChunkProcessor.Process(group, jobConfig, options, reporter);
+            ChunkProcessor.Process(group, backupFolderPath, options, reporter);
             current++;
         }
         stopwatch.Stop();
         reporter.Info($"Processed {fileGroups.Count} groups.");
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
+        registryManager.AddEntry(DateTime.Now, options.Mode, "manifestfilnavn.json");
+        registryManager.Save();
 
         reporter.Success("Backup process completed successfully.");
 

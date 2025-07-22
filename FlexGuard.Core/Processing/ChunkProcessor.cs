@@ -1,20 +1,16 @@
-﻿using FlexGuard.Core.Config;
-using FlexGuard.Core.Model;
+﻿using FlexGuard.Core.Model;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Reporting;
 using System.IO.Compression;
 
-namespace FlexGuard.Core.Processing;
-
 public static class ChunkProcessor
 {
-    public static void Process(FileGroup group, BackupJobConfig config, ProgramOptions options, IMessageReporter reporter)
+    public static void Process(FileGroup group, string backupFolderPath, ProgramOptions options, IMessageReporter reporter)
     {
-        var chunkFileName = $"{options.JobName}_{group.Index:D4}.fgchunk";
-        var outputDirectory = Path.Combine(config.DestinationPath, options.JobName);
-        var outputPath = Path.Combine(outputDirectory, chunkFileName);
+        var chunkFileName = $"{group.Index:D4}.fgchunk";
+        var outputPath = Path.Combine(backupFolderPath, chunkFileName);
 
-        Directory.CreateDirectory(outputDirectory);
+        Directory.CreateDirectory(backupFolderPath);
 
         reporter.Info($"Processing chunk {group.Index} with {group.Files.Count} files...");
 
