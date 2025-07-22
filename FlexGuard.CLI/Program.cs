@@ -4,7 +4,6 @@ using FlexGuard.Core.Processing;
 using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
-using System.Text.RegularExpressions;
 
 class Program
 {
