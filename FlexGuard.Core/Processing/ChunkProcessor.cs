@@ -19,65 +19,63 @@ public static class ChunkProcessor
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
 
         Directory.CreateDirectory(backupFolderPath);
-
         reporter.Info($"Processing chunk {group.Index} with {group.Files.Count} files...");
 
         try
         {
-            using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-            using var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal);
-            using var archive = new ZipArchive(gzipStream, ZipArchiveMode.Create);
-
-            foreach (var file in group.Files)
+            using var zipBuffer = new MemoryStream(); // ZIP data in RAM
+            using (var archive = new ZipArchive(zipBuffer, ZipArchiveMode.Create, leaveOpen: true))
             {
-                try
+                foreach (var file in group.Files)
                 {
-                    // Læs og hash filens indhold
-                    using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    using var ms = new MemoryStream();
-                    sourceStream.CopyTo(ms);
-                    var fileBytes = ms.ToArray();
-
-                    string hash;
-                    using (var sha256 = SHA256.Create())
+                    try
                     {
-                        hash = Convert.ToHexString(sha256.ComputeHash(fileBytes));
+                        using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        using var ms = new MemoryStream();
+                        sourceStream.CopyTo(ms);
+                        var fileBytes = ms.ToArray();
+
+                        string hash;
+                        using (var sha256 = SHA256.Create())
+                        {
+                            hash = Convert.ToHexString(sha256.ComputeHash(fileBytes));
+                        }
+
+                        var entry = archive.CreateEntry(file.RelativePath, CompressionLevel.Optimal);
+                        using (var entryStream = entry.Open())
+                        {
+                            ms.Position = 0;
+                            ms.CopyTo(entryStream);
+                        }
+
+                        // Her er det OK at hente CompressedLength
+                        double compressionRatio = file.FileSize > 0
+                            ? Math.Round(100.0 * (file.FileSize - entry.CompressedLength) / file.FileSize, 2)
+                            : 0;
+
+                        manifestBuilder.AddFile(new FileEntry
+                        {
+                            RelativePath = file.RelativePath,
+                            Hash = hash,
+                            ChunkFile = chunkFileName,
+                            FileSize = file.FileSize,
+                            LastWriteTimeUtc = file.LastWriteTimeUtc,
+                            CompressionSkipped = false,
+                            CompressionRatio = compressionRatio
+                        });
                     }
-
-                    // Opret entry og skriv data
-                    var entry = archive.CreateEntry(file.RelativePath, CompressionLevel.Optimal);
-                    long compressedSize;
-                    using (var entryStream = entry.Open())
+                    catch (Exception ex)
                     {
-                        ms.Position = 0;
-                        ms.CopyTo(entryStream);
+                        reporter.Warning($"Failed to add file '{file.SourcePath}': {ex.Message}");
                     }
-
-                    // Efter entry-stream er lukket, kan vi få længden
-                    compressedSize = entry.CompressedLength;
-
-                    // Beregn komprimeringsrate
-                    double compressionRatio = file.FileSize > 0
-                        ? Math.Round(100.0 * (file.FileSize - compressedSize) / file.FileSize, 2)
-                        : 0;
-
-                    // Tilføj til manifest
-                    manifestBuilder.AddFile(new FileEntry
-                    {
-                        RelativePath = file.RelativePath,
-                        Hash = hash,
-                        ChunkFile = chunkFileName,
-                        FileSize = file.FileSize,
-                        LastWriteTimeUtc = file.LastWriteTimeUtc,
-                        CompressionSkipped = false,
-                        CompressionRatio = compressedSize
-                    });
-                }
-                catch (Exception ex)
-                {
-                    reporter.Warning($"Failed to add file '{file.SourcePath}': {ex.Message}");
                 }
             }
+
+            // Når zipBuffer er færdigskrevet, kan vi gzippe det og skrive til disk
+            zipBuffer.Position = 0;
+            using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+            using var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal);
+            zipBuffer.CopyTo(gzipStream);
 
             reporter.Info($"Chunk {group.Index} written to '{outputPath}'");
         }
