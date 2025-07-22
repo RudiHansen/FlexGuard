@@ -43,7 +43,8 @@ class Program
         stopwatch.Stop();
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
-        var registryManager = new BackupRegistryManager(options.JobName, Path.Combine(jobConfig.DestinationPath, options.JobName));
+        var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
+        var registryManager = new BackupRegistryManager(options.JobName, localJobsFolder);
 
         stopwatch.Restart();
         reporter.Info("Processing file groups...");
