@@ -1,5 +1,7 @@
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
+using FlexGuard.Core.Processing;
+using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 
@@ -10,8 +12,8 @@ class Program
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
-        var options = new ProgramOptions("Test1", OperationMode.FullBackup);
-        //var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
+        //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
+        var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
 
@@ -32,6 +34,39 @@ class Program
         stopwatch.Stop();
         reporter.Info($"Found {allFiles.Count} files to back up.");
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
+
+        stopwatch.Restart();
+        reporter.Info("Grouping files into chunks...");
+        var fileGroups = ChunkBuilder.BuildGroups(allFiles, options);
+        reporter.Info($"Created {fileGroups.Count} file groups.");
+        stopwatch.Stop();
+        reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
+
+        var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
+        var registryManager = new BackupRegistryManager(options.JobName, localJobsFolder);
+        var manifestBuilder = new BackupManifestBuilder(options.JobName, options.Mode);
+
+        stopwatch.Restart();
+        reporter.Info("Processing file groups...");
+        string backupFolderPath = Path.Combine(jobConfig.DestinationPath, BackupPathHelper.GetBackupFolderName(options.Mode, DateTime.Now));
+        int current = 1;
+        foreach (var group in fileGroups)
+        {
+            reporter.Info($"Processing group {current} of {fileGroups.Count} with {group.Files.Count} files ({group.TotalSize / 1024 / 1024} MB)...");
+            ChunkProcessor.Process(group, backupFolderPath, options, reporter, manifestBuilder);
+            current++;
+        }
+        stopwatch.Stop();
+        reporter.Info($"Processed {fileGroups.Count} groups.");
+        reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
+
+        string manifestFileName = manifestBuilder.Save(localJobsFolder);
+        registryManager.AddEntry(DateTime.UtcNow, options.Mode, manifestFileName);
+        registryManager.Save();
+
+
+        reporter.Success("Backup process completed successfully.");
+
     }
-    
+
 }

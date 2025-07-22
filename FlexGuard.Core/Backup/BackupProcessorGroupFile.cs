@@ -88,6 +88,7 @@ public class BackupProcessorGroupFile : IBackupProcessor
             try
             {
                 var info = new FileInfo(item.SourcePath);
+                /*
                 manifestOut.Add(new FileEntry
                 {
                     SourcePath = item.SourcePath,
@@ -97,6 +98,7 @@ public class BackupProcessorGroupFile : IBackupProcessor
                     FileSize = info.Length,
                     LastWriteTimeUtc = info.LastWriteTimeUtc
                 });
+                */
             }
             catch (Exception ex)
             {
