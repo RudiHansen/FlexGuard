@@ -3,6 +3,7 @@ using FlexGuard.Core.Options;
 using FlexGuard.Core.Processing;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
+using System.Text.RegularExpressions;
 
 class Program
 {
@@ -11,8 +12,8 @@ class Program
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
-        //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
-        var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
+        var options = new ProgramOptions("Test1", OperationMode.FullBackup);
+        //var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
 
@@ -40,6 +41,22 @@ class Program
         reporter.Info($"Created {fileGroups.Count} file groups.");
         stopwatch.Stop();
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
+
+
+        stopwatch.Restart();
+        reporter.Info("Processing file groups...");
+        int current = 1;
+        foreach (var group in fileGroups)
+        {
+            reporter.Info($"Processing group {current} of {fileGroups.Count} with {group.Files.Count} files ({group.TotalSize / 1024 / 1024} MB)...");
+            ChunkProcessor.Process(group, jobConfig, options, reporter);
+            current++;
+        }
+        stopwatch.Stop();
+        reporter.Info($"Processed {fileGroups.Count} groups.");
+        reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
+
+        reporter.Success("Backup process completed successfully.");
 
     }
 
