@@ -29,6 +29,12 @@ public class BackupManifestBuilder
         var fileName = $"manifest_{_manifest.Timestamp:yyyy-MM-ddTHHmm}.json";
         var fullPath = Path.Combine(destinationFolder, fileName);
 
+        if (!string.IsNullOrEmpty(destinationFolder))
+        {
+            Directory.CreateDirectory(destinationFolder); // Sørger for at mappen findes
+        }
+
+
         var json = JsonSerializer.Serialize(_manifest, new JsonSerializerOptions
         {
             WriteIndented = true

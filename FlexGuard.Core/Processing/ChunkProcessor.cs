@@ -9,12 +9,14 @@ using System.Security.Cryptography;
 public static class ChunkProcessor
 {
     public static void Process(
-    FileGroup group,
-    string backupFolderPath,
-    ProgramOptions options,
-    IMessageReporter reporter,
-    BackupManifestBuilder manifestBuilder)
+        FileGroup group,
+        string backupFolderPath,
+        ProgramOptions options,
+        IMessageReporter reporter,
+        BackupManifestBuilder manifestBuilder)
     {
+        const long MaxSizeForRatioCheck = 100_000_000; // 100 MB
+
         var chunkFileName = $"{group.Index:D4}.fgchunk";
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
 
@@ -30,44 +32,49 @@ public static class ChunkProcessor
                 {
                     try
                     {
-                        // Læs filens bytes
+                        if (file.FileSize > MaxSizeForRatioCheck)
+                        {
+                            reporter.Debug($"Large file detected: {file.RelativePath} ({file.FileSize / 1024 / 1024} MB). Skipping compression ratio measurement.");
+                        }
+
                         using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                         using var ms = new MemoryStream();
                         sourceStream.CopyTo(ms);
                         var fileBytes = ms.ToArray();
 
-                        // Beregn hash
+                        // Calculate SHA256 hash
                         string hash;
                         using (var sha256 = SHA256.Create())
                         {
                             hash = Convert.ToHexString(sha256.ComputeHash(fileBytes));
                         }
 
-                        // Beregn komprimeringsforhold separat
-                        long compressedSize;
-                        using (var tempCompressed = new MemoryStream())
+                        // Optional compression ratio measurement
+                        double compressionRatio = 0;
+                        if (file.FileSize <= MaxSizeForRatioCheck)
                         {
+                            using var tempCompressed = new MemoryStream();
                             using (var zip = new ZipArchive(tempCompressed, ZipArchiveMode.Create, leaveOpen: true))
                             {
                                 var tempEntry = zip.CreateEntry("dummy", CompressionLevel.Optimal);
                                 using var tempStream = tempEntry.Open();
                                 tempStream.Write(fileBytes, 0, fileBytes.Length);
                             }
-                            compressedSize = tempCompressed.Length;
+
+                            long compressedSize = tempCompressed.Length;
+                            compressionRatio = file.FileSize > 0
+                                ? Math.Round(100.0 * (file.FileSize - compressedSize) / file.FileSize, 2)
+                                : 0;
                         }
 
-                        double compressionRatio = file.FileSize > 0
-                            ? Math.Round(100.0 * (file.FileSize - compressedSize) / file.FileSize, 2)
-                            : 0;
-
-                        // Tilføj rigtig entry til arkiv
+                        // Add real entry to archive
                         var entry = archive.CreateEntry(file.RelativePath, CompressionLevel.Optimal);
                         using (var entryStream = entry.Open())
                         {
                             entryStream.Write(fileBytes, 0, fileBytes.Length);
                         }
 
-                        // Tilføj til manifest
+                        // Add to manifest
                         manifestBuilder.AddFile(new FileEntry
                         {
                             RelativePath = file.RelativePath,
@@ -86,7 +93,7 @@ public static class ChunkProcessor
                 }
             }
 
-            // Gem chunk til disk med GZip
+            // Write to disk as GZip
             zipBuffer.Position = 0;
             using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
             using var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal);
