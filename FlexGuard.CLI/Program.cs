@@ -1,3 +1,4 @@
+using FlexGuard.CLI.Library;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Processing;
@@ -25,7 +26,8 @@ class Program
         if (options.Mode == OperationMode.Restore)
         {
             reporter.Info("Restore from backup...");
-            RestoreHelper.RestoreFile("C/Users/RSH/OneDrive/Billeder/_Templates/Tegninger.jpg", localJobsFolder, jobConfig, reporter);
+            ManifestTreeViewer.SelectFileFromManifest(@"C:\Users\RSH\source\repos\FlexGuard\FlexGuard.CLI\bin\Debug\net8.0\Jobs\TestSmall\manifest_2025-07-23T2005.json");
+            //RestoreHelper.RestoreFile("C/Users/RSH/OneDrive/Billeder/_Templates/Tegninger.jpg", localJobsFolder, jobConfig, reporter);
             return;
         }
 
