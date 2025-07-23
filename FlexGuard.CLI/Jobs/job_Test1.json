@@ -6,12 +6,16 @@
       "Exclude": [ "*.tmp", "bin", "obj" ]
     },
     {
-      "Path": "C:/Users/RSH/OneDrive/Billeder/0Moments/2013",
-      "Exclude": []
+      "Path": "C:/Users/RSH/OneDrive/Billeder",
+      "Exclude": [ "0Moments/","DCIM/" ]
+    },
+    {
+      "Path": "C:/Users/RSH/OneDrive/Kunder",
+      "Exclude": ["Archive/","D365FoPP/","Biometria/","Danalim/","DevTask/"]
     },
     {
       "Path": "C:/Users/RSH/OneDrive/Ebook",
-      "Exclude": []
+      "Exclude": ["Vakse Viggo/","Anders And/"]
     },
     {
       "Path": "C:/Temp/Far",

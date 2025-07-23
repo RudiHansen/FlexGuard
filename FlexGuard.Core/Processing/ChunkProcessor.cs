@@ -32,7 +32,7 @@ public static class ChunkProcessor
                 {
                     try
                     {
-                        if (file.FileSize > MaxSizeForRatioCheck)
+                        if (options.EnableCompressionRatioMeasurement && file.FileSize > MaxSizeForRatioCheck)
                         {
                             reporter.Debug($"Large file detected: {file.RelativePath} ({file.FileSize / 1024 / 1024} MB). Skipping compression ratio measurement.");
                         }
@@ -51,7 +51,7 @@ public static class ChunkProcessor
 
                         // Optional compression ratio measurement
                         double compressionRatio = 0;
-                        if (file.FileSize <= MaxSizeForRatioCheck)
+                        if (options.EnableCompressionRatioMeasurement && file.FileSize <= MaxSizeForRatioCheck)
                         {
                             using var tempCompressed = new MemoryStream();
                             using (var zip = new ZipArchive(tempCompressed, ZipArchiveMode.Create, leaveOpen: true))
