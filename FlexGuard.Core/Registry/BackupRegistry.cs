@@ -10,6 +10,7 @@
             public required DateTime Timestamp { get; set; }
             public required string Type { get; set; }
             public required string ManifestFileName { get; set; }
+            public required string DestinationFolderName { get; set; }
         }
     }
 }

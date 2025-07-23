@@ -3,6 +3,7 @@ using FlexGuard.Core.Options;
 using FlexGuard.Core.Processing;
 using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
+using FlexGuard.Core.Restore;
 using FlexGuard.Core.Util;
 
 class Program
@@ -12,12 +13,21 @@ class Program
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
-        var options = new ProgramOptions("Test1", OperationMode.FullBackup);
+        var options = new ProgramOptions("TestSmall", OperationMode.Restore);
+        //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
 
         var jobConfig = JobLoader.Load(options.JobName);
+        var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
+
+        if (options.Mode == OperationMode.Restore)
+        {
+            reporter.Info("Restore from backup...");
+            RestoreHelper.RestoreFile("RDPStarterData\\RDPModel.csv", localJobsFolder, jobConfig, reporter);
+            return;
+        }
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         reporter.Info("Create backup file list...");
@@ -26,7 +36,7 @@ class Program
         if (options.Mode == OperationMode.DifferentialBackup)
         {
             // set lastBackupTime manually for testing purposes
-            lastBackupTime = new DateTime(2025, 5, 1, 0, 0, 0, DateTimeKind.Utc);
+            lastBackupTime = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc);
         }
 
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
@@ -43,7 +53,6 @@ class Program
         stopwatch.Stop();
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
-        var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
         var registryManager = new BackupRegistryManager(options.JobName, localJobsFolder);
         var manifestBuilder = new BackupManifestBuilder(options.JobName, options.Mode);
 
@@ -62,7 +71,7 @@ class Program
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
         string manifestFileName = manifestBuilder.Save(localJobsFolder);
-        registryManager.AddEntry(DateTime.UtcNow, options.Mode, manifestFileName);
+        registryManager.AddEntry(DateTime.UtcNow, options.Mode, manifestFileName, backupFolderPath);
         registryManager.Save();
 
         reporter.Success("Backup process completed successfully.");

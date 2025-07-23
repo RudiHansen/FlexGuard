@@ -25,13 +25,14 @@ public class BackupRegistryManager
 
     public IReadOnlyList<BackupRegistry.BackupEntry> Entries => _registry.Backups;
 
-    public void AddEntry(DateTime timestamp, OperationMode mode, string manifestFileName)
+    public void AddEntry(DateTime timestamp, OperationMode mode, string manifestFileName, string destinationFolderName)
     {
         _registry.Backups.Add(new BackupRegistry.BackupEntry
         {
             Timestamp = timestamp,
             Type = mode.ToString(),
-            ManifestFileName = manifestFileName
+            ManifestFileName = manifestFileName,
+            DestinationFolderName = destinationFolderName
         });
     }
 
@@ -45,5 +46,12 @@ public class BackupRegistryManager
 
         var json = JsonSerializer.Serialize(_registry, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_registryPath, json);
+    }
+    public BackupRegistry.BackupEntry? GetLatestEntry(string _type)
+    {
+        return _registry.Backups
+            .OrderByDescending(e => e.Timestamp)
+            .Where(e => e.Type.Equals(_type, StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault();
     }
 }
