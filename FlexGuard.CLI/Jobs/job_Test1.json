@@ -7,20 +7,21 @@
     },
     {
       "Path": "C:/Users/RSH/OneDrive/Billeder",
-      "Exclude": [ "0Moments/","DCIM/" ]
+      "Exclude": [ "0Moments/", "DCIM/" ]
     },
     {
       "Path": "C:/Users/RSH/OneDrive/Kunder",
-      "Exclude": ["Archive/","D365FoPP/","Biometria/","Danalim/","DevTask/"]
+      "Exclude": [ "Archive/", "D365FoPP/", "Biometria/", "Danalim/", "DevTask/" ]
     },
     {
       "Path": "C:/Users/RSH/OneDrive/Ebook",
-      "Exclude": ["Vakse Viggo/","Anders And/"]
+      "Exclude": [ "Vakse Viggo/", "Anders And/" ]
     },
     {
       "Path": "C:/Temp/Far",
       "Exclude": []
     }
   ],
-  "DestinationPath": "Z:/FlexGuard"
+  "DestinationPath": "Z:/FlexGuard/Test1",
+  "RestoreTargetFolder": "C:/Temp/FlexGuardRestore/Test1"
 }

@@ -14,5 +14,6 @@
       "Exclude": []
     }
   ],
-  "DestinationPath": "Z:/FlexGuard"
+  "DestinationPath": "Z:/FlexGuard/TestLarge",
+  "RestoreTargetFolder": "C:/Temp/FlexGuardRestore/TestLarge"
 }

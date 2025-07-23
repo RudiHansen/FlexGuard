@@ -13,5 +13,6 @@
       ]
     }
   ],
-  "DestinationPath": "Z:/FlexGuard"
+  "DestinationPath": "Z:/FlexGuard/TestExLarge",
+  "RestoreTargetFolder": "C:/Temp/FlexGuardRestore/TestExLarge"
 }
