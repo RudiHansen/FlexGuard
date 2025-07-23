@@ -12,9 +12,9 @@ class Program
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
-        //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
+        var options = new ProgramOptions("Test1", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
-        var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
+        //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
 
         var jobConfig = JobLoader.Load(options.JobName);
@@ -30,6 +30,7 @@ class Program
         }
 
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
+        FileListReporter.ReportSummary(allFiles, reporter);
 
         stopwatch.Stop();
         reporter.Info($"Found {allFiles.Count} files to back up.");
