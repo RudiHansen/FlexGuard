@@ -15,8 +15,6 @@ public static class ChunkProcessor
         IMessageReporter reporter,
         BackupManifestBuilder manifestBuilder)
     {
-        const long MaxSizeForRatioCheck = 100_000_000; // 100 MB
-
         var chunkFileName = $"{group.Index:D4}.fgchunk";
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
 
@@ -32,11 +30,6 @@ public static class ChunkProcessor
                 {
                     try
                     {
-                        if (options.EnableCompressionRatioMeasurement && file.FileSize > MaxSizeForRatioCheck)
-                        {
-                            reporter.Debug($"Large file detected: {file.RelativePath} ({file.FileSize / 1024 / 1024} MB). Skipping compression ratio measurement.");
-                        }
-
                         using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                         using var ms = new MemoryStream();
                         sourceStream.CopyTo(ms);
@@ -47,24 +40,6 @@ public static class ChunkProcessor
                         using (var sha256 = SHA256.Create())
                         {
                             hash = Convert.ToHexString(sha256.ComputeHash(fileBytes));
-                        }
-
-                        // Optional compression ratio measurement
-                        double compressionRatio = 0;
-                        if (options.EnableCompressionRatioMeasurement && file.FileSize <= MaxSizeForRatioCheck)
-                        {
-                            using var tempCompressed = new MemoryStream();
-                            using (var zip = new ZipArchive(tempCompressed, ZipArchiveMode.Create, leaveOpen: true))
-                            {
-                                var tempEntry = zip.CreateEntry("dummy", CompressionLevel.Optimal);
-                                using var tempStream = tempEntry.Open();
-                                tempStream.Write(fileBytes, 0, fileBytes.Length);
-                            }
-
-                            long compressedSize = tempCompressed.Length;
-                            compressionRatio = file.FileSize > 0
-                                ? Math.Round(100.0 * (file.FileSize - compressedSize) / file.FileSize, 2)
-                                : 0;
                         }
 
                         // Add real entry to archive
@@ -83,7 +58,7 @@ public static class ChunkProcessor
                             FileSize = file.FileSize,
                             LastWriteTimeUtc = file.LastWriteTimeUtc,
                             CompressionSkipped = false,
-                            CompressionRatio = compressionRatio
+                            CompressionRatio = 0
                         });
                     }
                     catch (Exception ex)
