@@ -6,4 +6,14 @@ public class PendingFileEntry
     public required string RelativePath { get; set; }
     public required long FileSize { get; set; }
     public required DateTime LastWriteTimeUtc { get; set; }
+    public required FileGroupType GroupType { get; set; }
+}
+
+public enum FileGroupType
+{
+    SmallCompressible,
+    SmallNonCompressible,
+    LargeCompressible,
+    LargeNonCompressible,
+    Default
 }
