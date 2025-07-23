@@ -10,11 +10,11 @@ namespace FlexGuard.Core.Processing;
 public static class ChunkProcessor
 {
     public static void Process(
-        FileGroup group,
-        string backupFolderPath,
-        ProgramOptions options,
-        IMessageReporter reporter,
-        BackupManifestBuilder manifestBuilder)
+    FileGroup group,
+    string backupFolderPath,
+    ProgramOptions options,
+    IMessageReporter reporter,
+    BackupManifestBuilder manifestBuilder)
     {
         var chunkFileName = $"{group.Index:D4}.fgchunk";
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
@@ -31,36 +31,31 @@ public static class ChunkProcessor
                 CompressionLevel.Optimal
         };
 
-        // Flag to control final GZip wrapping
-        bool skipGZip = group.GroupType is FileGroupType.HugeCompressible or FileGroupType.HugeNonCompressible;
+        // Step 1: Create temporary zip file
+        var tempZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
         try
         {
-            using var zipBuffer = new MemoryStream();
-            using (var archive = new ZipArchive(zipBuffer, ZipArchiveMode.Create, leaveOpen: true))
+            using (var zipFileStream = new FileStream(tempZipPath, FileMode.Create, FileAccess.Write))
+            using (var archive = new ZipArchive(zipFileStream, ZipArchiveMode.Create, leaveOpen: false))
             {
                 foreach (var file in group.Files)
                 {
                     try
                     {
                         using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                        using var ms = new MemoryStream();
-                        sourceStream.CopyTo(ms);
-                        var fileBytes = ms.ToArray();
 
-                        // Calculate SHA256 hash
+                        // Compute hash directly from stream
                         string hash;
                         using (var sha256 = SHA256.Create())
                         {
-                            hash = Convert.ToHexString(sha256.ComputeHash(fileBytes));
+                            hash = Convert.ToHexString(sha256.ComputeHash(sourceStream));
+                            sourceStream.Position = 0;
                         }
 
-                        // Add file to ZIP archive
                         var entry = archive.CreateEntry(file.RelativePath, zipCompressionLevel);
-                        using (var entryStream = entry.Open())
-                        {
-                            entryStream.Write(fileBytes, 0, fileBytes.Length);
-                        }
+                        using var entryStream = entry.Open();
+                        sourceStream.CopyTo(entryStream);
 
                         manifestBuilder.AddFile(new FileEntry
                         {
@@ -80,24 +75,22 @@ public static class ChunkProcessor
                 }
             }
 
-            // Write buffer to disk with optional GZip compression
-            zipBuffer.Position = 0;
-            using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-            if (skipGZip)
-            {
-                zipBuffer.CopyTo(fileStream);
-            }
-            else
-            {
-                using var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal);
-                zipBuffer.CopyTo(gzipStream);
-            }
+            // Step 2: GZip-compress the ZIP file
+            using var zipInput = new FileStream(tempZipPath, FileMode.Open, FileAccess.Read);
+            using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+            using var gzipStream = new GZipStream(outStream, CompressionLevel.Optimal);
+            zipInput.CopyTo(gzipStream);
 
             reporter.Info($"Chunk {group.Index} written to '{outputPath}'");
         }
         catch (Exception ex)
         {
             reporter.Error($"Failed to create chunk {group.Index}: {ex.Message}");
+        }
+        finally
+        {
+            // Step 3: Clean up temp file
+            try { if (File.Exists(tempZipPath)) File.Delete(tempZipPath); } catch { }
         }
     }
 }
