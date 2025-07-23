@@ -25,7 +25,7 @@ class Program
         if (options.Mode == OperationMode.Restore)
         {
             reporter.Info("Restore from backup...");
-            RestoreHelper.RestoreFile("RDPStarterData\\RDPModel.csv", localJobsFolder, jobConfig, reporter);
+            RestoreHelper.RestoreFile("C/Users/RSH/OneDrive/Billeder/_Templates/Tegninger.jpg", localJobsFolder, jobConfig, reporter);
             return;
         }
 

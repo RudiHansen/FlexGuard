@@ -66,7 +66,8 @@ public static class RestoreHelper
         }
 
         // Determine output path
-        var outputPath = Path.Combine(jobConfig.RestoreTargetFolder, relativePath);
+        //var outputPath = Path.Combine(jobConfig.RestoreTargetFolder, relativePath);
+        var outputPath = Path.GetFullPath(Path.Combine(jobConfig.RestoreTargetFolder, relativePath));
         var outputDir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);

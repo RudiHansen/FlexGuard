@@ -25,12 +25,16 @@ public static class FileCollector
 
                     if (lastBackupTime == null || info.LastWriteTimeUtc > lastBackupTime.Value)
                     {
-                        var relativePath = Path.GetRelativePath(source.Path, file);
+                        var fullPath = Path.GetFullPath(file);
+                        var drive = Path.GetPathRoot(fullPath)?.TrimEnd('\\', '/').Replace(":", "") ?? "UNKNOWN";
+                        var relativeToRoot = Path.GetRelativePath(Path.GetPathRoot(fullPath) ?? "", fullPath);
+                        var relativePath = Path.Combine(drive, relativeToRoot).Replace('\\', '/');
+
                         var groupType = DetermineGroupType(file, info.Length);
 
                         entries.Add(new PendingFileEntry
                         {
-                            SourcePath = file,
+                            SourcePath = fullPath,
                             RelativePath = relativePath,
                             FileSize = info.Length,
                             LastWriteTimeUtc = info.LastWriteTimeUtc,
