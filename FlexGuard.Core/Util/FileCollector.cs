@@ -51,50 +51,42 @@ public static class FileCollector
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
 
-        // Step 0: Very small files are never worth compressing
+        // Step 0: Extremely small files are not worth compressing
         if (size <= 100)
+            return FileGroupType.SmallNonCompressible;
+
+        // Step 1: Check if the file extension is typically already compressed
+        if (IsNonCompressibleExtension(extension))
         {
+            if (size > 1_000_000_000)
+                return FileGroupType.HugeNonCompressible;
+            if (size > 100_000_000)
+                return FileGroupType.LargeNonCompressible;
             return FileGroupType.SmallNonCompressible;
         }
 
-        // Known archive/media formats that are typically already compressed
-        if (IsNonCompressibleExtension(extension))
-        {
-            return size < 100_000
-                ? FileGroupType.SmallNonCompressible
-                : FileGroupType.LargeNonCompressible;
-        }
+        // Step 2: Otherwise, classify based on size
+        if (size > 1_000_000_000)
+            return FileGroupType.HugeCompressible;
 
-        // Small files that are likely compressible
+        if (size > 100_000_000)
+            return FileGroupType.LargeCompressible;
+
         if (size < 100_000)
-        {
             return FileGroupType.SmallCompressible;
-        }
 
-        // Everything else
-        return size > 100_000_000
-            ? FileGroupType.LargeCompressible
-            : FileGroupType.Default;
+        // Step 3: Default fallback for mid-sized files
+        return FileGroupType.Default;
     }
+
+    private static readonly HashSet<string> NonCompressibleExtensions = new(StringComparer.OrdinalIgnoreCase)
+{
+    ".zip", ".rar", ".7z", ".mp3", ".mp4", ".mkv", ".avi", ".gz"
+    //".jpg", ".jpeg", ".png", ".gif",".pdf"
+};
 
     private static bool IsNonCompressibleExtension(string ext)
     {
-        return ext switch
-        {
-            ".zip" => true,
-            ".rar" => true,
-            ".7z" => true,
-            //".jpg" => true,
-            //".jpeg" => true,
-            //".png" => true,
-            //".gif" => true,
-            ".mp3" => true,
-            ".mp4" => true,
-            ".mkv" => true,
-            ".avi" => true,
-            ".gz" => true,
-            //".pdf" => true,
-            _ => false
-        };
+        return NonCompressibleExtensions.Contains(ext);
     }
 }

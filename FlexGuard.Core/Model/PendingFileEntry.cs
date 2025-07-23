@@ -15,5 +15,7 @@ public enum FileGroupType
     SmallNonCompressible,
     LargeCompressible,
     LargeNonCompressible,
+    HugeCompressible,
+    HugeNonCompressible, 
     Default
 }

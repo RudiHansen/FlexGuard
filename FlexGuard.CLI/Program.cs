@@ -12,9 +12,9 @@ class Program
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
-        var options = new ProgramOptions("Test1", OperationMode.FullBackup);
+        //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
-        //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
+        var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
 
         var jobConfig = JobLoader.Load(options.JobName);
@@ -35,6 +35,7 @@ class Program
         reporter.Info($"Found {allFiles.Count} files to back up.");
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
+        /*
         stopwatch.Restart();
         reporter.Info("Grouping files into chunks...");
         var fileGroups = ChunkBuilder.BuildGroups(allFiles, options);
@@ -63,7 +64,7 @@ class Program
         string manifestFileName = manifestBuilder.Save(localJobsFolder);
         registryManager.AddEntry(DateTime.UtcNow, options.Mode, manifestFileName);
         registryManager.Save();
-
+        */
 
         reporter.Success("Backup process completed successfully.");
 
