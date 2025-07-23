@@ -1,10 +1,11 @@
 ﻿using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Model;
 using FlexGuard.Core.Options;
-using FlexGuard.Core.Processing;
 using FlexGuard.Core.Reporting;
 using System.IO.Compression;
 using System.Security.Cryptography;
+
+namespace FlexGuard.Core.Processing;
 
 public static class ChunkProcessor
 {
@@ -19,7 +20,19 @@ public static class ChunkProcessor
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
 
         Directory.CreateDirectory(backupFolderPath);
-        reporter.Info($"Processing chunk {group.Index} with {group.Files.Count} files...");
+        reporter.Info($"Processing chunk {group.Index} with {group.Files.Count} files ({group.GroupType})...");
+
+        // Determine ZIP compression level based on group type
+        var zipCompressionLevel = group.GroupType switch
+        {
+            FileGroupType.LargeNonCompressible or FileGroupType.HugeNonCompressible or FileGroupType.SmallNonCompressible =>
+                CompressionLevel.NoCompression,
+            _ =>
+                CompressionLevel.Optimal
+        };
+
+        // Flag to control final GZip wrapping
+        bool skipGZip = group.GroupType is FileGroupType.HugeCompressible or FileGroupType.HugeNonCompressible;
 
         try
         {
@@ -42,14 +55,13 @@ public static class ChunkProcessor
                             hash = Convert.ToHexString(sha256.ComputeHash(fileBytes));
                         }
 
-                        // Add real entry to archive
-                        var entry = archive.CreateEntry(file.RelativePath, CompressionLevel.Optimal);
+                        // Add file to ZIP archive
+                        var entry = archive.CreateEntry(file.RelativePath, zipCompressionLevel);
                         using (var entryStream = entry.Open())
                         {
                             entryStream.Write(fileBytes, 0, fileBytes.Length);
                         }
 
-                        // Add to manifest
                         manifestBuilder.AddFile(new FileEntry
                         {
                             RelativePath = file.RelativePath,
@@ -57,7 +69,7 @@ public static class ChunkProcessor
                             ChunkFile = chunkFileName,
                             FileSize = file.FileSize,
                             LastWriteTimeUtc = file.LastWriteTimeUtc,
-                            CompressionSkipped = false,
+                            CompressionSkipped = zipCompressionLevel == CompressionLevel.NoCompression,
                             CompressionRatio = 0
                         });
                     }
@@ -68,11 +80,18 @@ public static class ChunkProcessor
                 }
             }
 
-            // Write to disk as GZip
+            // Write buffer to disk with optional GZip compression
             zipBuffer.Position = 0;
             using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-            using var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal);
-            zipBuffer.CopyTo(gzipStream);
+            if (skipGZip)
+            {
+                zipBuffer.CopyTo(fileStream);
+            }
+            else
+            {
+                using var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal);
+                zipBuffer.CopyTo(gzipStream);
+            }
 
             reporter.Info($"Chunk {group.Index} written to '{outputPath}'");
         }
