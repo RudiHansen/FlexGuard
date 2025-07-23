@@ -26,7 +26,7 @@ class Program
         if (options.Mode == OperationMode.DifferentialBackup)
         {
             // set lastBackupTime manually for testing purposes
-            lastBackupTime = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+            lastBackupTime = new DateTime(2025, 5, 1, 0, 0, 0, DateTimeKind.Utc);
         }
 
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
@@ -66,6 +66,7 @@ class Program
         registryManager.Save();
 
         reporter.Success("Backup process completed successfully.");
+        NotificationHelper.PlayBackupCompleteSound();
 
     }
 
