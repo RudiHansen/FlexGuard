@@ -36,6 +36,8 @@ class Program
         reporter.Info($"Found {allFiles.Count} files to back up.");
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
+        var fileGroups = FileGrouper.GroupFiles(allFiles, options.MaxFilesPerGroup, options.MaxBytesPerGroup,reporter);
+
         /*
         stopwatch.Restart();
         reporter.Info("Grouping files into chunks...");
