@@ -8,6 +8,7 @@ using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Restore;
 using FlexGuard.Core.Util;
 using Microsoft.Win32;
+using static FlexGuard.Core.Registry.BackupRegistry;
 
 class Program
 {
@@ -25,11 +26,14 @@ class Program
         BackupJobConfig jobConfig = JobLoader.Load(options.JobName);
         var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
 
+        var registryManager = new BackupRegistryManager(options.JobName, localJobsFolder);
+        var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
+        registryManager.Save();
+
         if (options.Mode == OperationMode.Restore)
         {
             reporter.Info("Restore from backup...");
-            var registryManager2 = new BackupRegistryManager(options.JobName, localJobsFolder);
-            var selector = new RestoreFileSelector(registryManager2.GetRegistry(), localJobsFolder);
+            var selector = new RestoreFileSelector(registryManager.GetRegistry(), localJobsFolder);
             var selectedFiles = selector.SelectFiles();
 
             foreach (var file in selectedFiles)
@@ -74,12 +78,12 @@ class Program
         stopwatch.Stop();
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
-        var registryManager = new BackupRegistryManager(options.JobName, localJobsFolder);
         var manifestBuilder = new BackupManifestBuilder(options.JobName, options.Mode);
 
         stopwatch.Restart();
         reporter.Info("Processing file groups...");
-        string backupFolderPath = Path.Combine(jobConfig.DestinationPath, BackupPathHelper.GetBackupFolderName(options.Mode, DateTime.Now));
+        string backupFolderPath = Path.Combine(jobConfig.DestinationPath, backupEntry.DestinationFolderName);
+
         int current = 1;
         foreach (var group in fileGroups)
         {
@@ -92,9 +96,8 @@ class Program
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
         string manifestFileName = manifestBuilder.Save(localJobsFolder);
-        registryManager.AddEntry(DateTime.UtcNow, options.Mode, manifestFileName, backupFolderPath);
+        backupEntry.TimestampEnd = DateTime.UtcNow;
         registryManager.Save();
-
         reporter.Success("Backup process completed successfully.");
         NotificationHelper.PlayBackupCompleteSound();
 

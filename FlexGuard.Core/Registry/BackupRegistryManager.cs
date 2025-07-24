@@ -25,15 +25,16 @@ public class BackupRegistryManager
 
     public IReadOnlyList<BackupRegistry.BackupEntry> Entries => _registry.Backups;
 
-    public void AddEntry(DateTime timestamp, OperationMode mode, string manifestFileName, string destinationFolderName)
+    public BackupRegistry.BackupEntry AddEntry(DateTime timestamp, OperationMode mode)
     {
-        _registry.Backups.Add(new BackupRegistry.BackupEntry
+        var entry = new BackupRegistry.BackupEntry
         {
-            Timestamp = timestamp,
-            Type = mode.ToString(),
-            ManifestFileName = manifestFileName,
-            DestinationFolderName = Path.GetFileName(destinationFolderName)
-        });
+            TimestampStart = timestamp,
+            Type = mode.ToString()
+        };
+
+        _registry.Backups.Add(entry);
+        return entry;
     }
 
     public void Save()
@@ -50,7 +51,7 @@ public class BackupRegistryManager
     public BackupRegistry.BackupEntry? GetLatestEntry(string _type)
     {
         return _registry.Backups
-            .OrderByDescending(e => e.Timestamp)
+            .OrderByDescending(e => e.TimestampStart)
             .Where(e => e.Type.Equals(_type, StringComparison.OrdinalIgnoreCase))
             .FirstOrDefault();
     }

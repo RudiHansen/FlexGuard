@@ -28,7 +28,7 @@ public class RestoreFileSelector
         var manifestEntry = AnsiConsole.Prompt(
             new SelectionPrompt<BackupRegistry.BackupEntry>()
                 .Title("Select a [green]backup version[/] to restore from")
-                .UseConverter(entry => $"{entry.Timestamp:yyyy-MM-dd HH:mm} - {entry.Type}")
+                .UseConverter(entry => $"{entry.TimestampStart:yyyy-MM-dd HH:mm} - {entry.Type}")
                 .AddChoices(_registry.Backups));
 
         var manifestPath = Path.Combine(_jobFolder, manifestEntry.ManifestFileName);

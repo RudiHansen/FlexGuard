@@ -7,10 +7,12 @@
 
         public class BackupEntry
         {
-            public required DateTime Timestamp { get; set; }
+            public required DateTime TimestampStart { get; set; }
+            public DateTime? TimestampEnd { get; set; }
             public required string Type { get; set; }
-            public required string ManifestFileName { get; set; }
-            public required string DestinationFolderName { get; set; }
+            public string ManifestFileName => $"manifest_{TimestampStart:yyyy-MM-ddTHHmm}.json";
+
+            public string DestinationFolderName => $"{TimestampStart:yyyy-MM-ddTHHmm}_{Type}";
         }
     }
 }
