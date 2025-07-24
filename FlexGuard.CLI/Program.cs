@@ -1,4 +1,5 @@
 using FlexGuard.CLI.Library;
+using FlexGuard.CLI.Restore;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Processing;
@@ -6,6 +7,7 @@ using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Restore;
 using FlexGuard.Core.Util;
+using Microsoft.Win32;
 
 class Program
 {
@@ -28,7 +30,11 @@ class Program
             reporter.Info("Restore from backup...");
             //ManifestTreeViewer.SelectFileFromManifest(@"C:\Users\RSH\source\repos\FlexGuard\FlexGuard.CLI\bin\Debug\net8.0\Jobs\TestSmall\manifest_2025-07-23T2005.json");
             //RestoreSelector.PromptRestoreFilesFromManifest(@"C:\Users\RSH\source\repos\FlexGuard\FlexGuard.CLI\bin\Debug\net8.0\Jobs\TestSmall\manifest_2025-07-23T2005.json");
-            RestoreHelper.RestoreFile("C/Users/RSH/OneDrive/Billeder/_Templates/Tegninger.jpg", localJobsFolder, jobConfig, reporter);
+            //RestoreHelper.RestoreFile("C/Users/RSH/OneDrive/Billeder/_Templates/Tegninger.jpg", localJobsFolder, jobConfig, reporter);
+            var registryManager2 = new BackupRegistryManager(options.JobName, localJobsFolder);
+            var selector = new RestoreFileSelector(registryManager2.GetRegistry(), localJobsFolder);
+            var selectedFiles = selector.SelectFiles();
+
             return;
         }
 

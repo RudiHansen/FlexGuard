@@ -54,4 +54,8 @@ public class BackupRegistryManager
             .Where(e => e.Type.Equals(_type, StringComparison.OrdinalIgnoreCase))
             .FirstOrDefault();
     }
+    public BackupRegistry GetRegistry()
+    {
+        return _registry;
+    }
 }
