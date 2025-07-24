@@ -16,9 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="config.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="Jobs\job_TestSmall.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
