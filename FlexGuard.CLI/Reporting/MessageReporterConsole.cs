@@ -1,6 +1,7 @@
-﻿using Spectre.Console;
+﻿using FlexGuard.Core.Reporting;
+using Spectre.Console;
 
-namespace FlexGuard.Core.Reporting;
+namespace FlexGuard.CLI.Reporting;
 
 public class MessageReporterConsole : IMessageReporter
 {

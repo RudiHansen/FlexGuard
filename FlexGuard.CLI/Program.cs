@@ -1,3 +1,4 @@
+using FlexGuard.CLI.Reporting;
 using FlexGuard.CLI.Restore;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
@@ -14,7 +15,7 @@ class Program
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
-        var options = new ProgramOptions("TestSmall", OperationMode.Restore);
+        var options = new ProgramOptions("TestSmall", OperationMode.FullBackup);
         //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
