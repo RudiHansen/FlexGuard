@@ -1,6 +1,6 @@
 ﻿using FlexGuard.Core.Manifest;
-using FlexGuard.Core.Restore;
 using Spectre.Console;
+using System.Text.Json;
 
 namespace FlexGuard.CLI.Library;
 
@@ -8,7 +8,7 @@ public static class RestoreSelector
 {
     public static List<string> PromptRestoreFilesFromManifest(string manifestPath)
     {
-        var manifest = RestoreHelper.Load(manifestPath);
+        var manifest = LoadMainfest(manifestPath);
 
         // Trin 1: Hent alle relative paths
         var allFiles = manifest.Files.Select(f => f.RelativePath).Distinct().ToList();
@@ -59,5 +59,10 @@ public static class RestoreSelector
 
         var confirm = AnsiConsole.Confirm("Vil du fortsætte med at gendanne disse filer?");
         return confirm ? selectedFiles.ToList() : new List<string>();
+    }
+    public static BackupManifest LoadMainfest(string path)
+    {
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<BackupManifest>(json)!;
     }
 }

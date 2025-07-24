@@ -16,9 +16,15 @@ public class RestoreFileSelector
         _jobFolder = jobFolder;
     }
 
-    public List<string> SelectFiles()
+    public record RestoreSelection(
+        string RelativePath,
+        string ChunkFile,
+        string Hash,
+        BackupRegistry.BackupEntry BackupEntry);
+
+    public List<RestoreSelection> SelectFiles()
     {
-        // 1. Brugeren vælger en manifest via registry
+        // 1. Let user select which backup to restore from
         var manifestEntry = AnsiConsole.Prompt(
             new SelectionPrompt<BackupRegistry.BackupEntry>()
                 .Title("Select a [green]backup version[/] to restore from")
@@ -43,9 +49,9 @@ public class RestoreFileSelector
             return new();
         }
 
-        // 3. Vis valg af filer
+        // 3. Show file selector
         var allFiles = manifest.Files.Select(f => f.RelativePath).Distinct().OrderBy(p => p).ToList();
-        var selected = AnsiConsole.Prompt(
+        var selectedPaths = AnsiConsole.Prompt(
             new MultiSelectionPrompt<string>()
                 .Title("Select [green]files to restore[/]")
                 .NotRequired()
@@ -54,6 +60,16 @@ public class RestoreFileSelector
                 .InstructionsText("[grey](Press [blue]<space>[/] to toggle a file, [green]<enter>[/] to accept)[/]")
                 .AddChoices(allFiles));
 
-        return selected;
+        // 4. Match back to full manifest entries
+        var selections = manifest.Files
+            .Where(f => selectedPaths.Contains(f.RelativePath))
+            .Select(f => new RestoreSelection(
+                f.RelativePath,
+                f.ChunkFile,
+                f.Hash,
+                manifestEntry))
+            .ToList();
+
+        return selections;
     }
 }

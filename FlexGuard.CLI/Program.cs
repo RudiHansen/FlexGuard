@@ -22,18 +22,30 @@ class Program
         //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
 
-        var jobConfig = JobLoader.Load(options.JobName);
+        BackupJobConfig jobConfig = JobLoader.Load(options.JobName);
         var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
 
         if (options.Mode == OperationMode.Restore)
         {
             reporter.Info("Restore from backup...");
-            //ManifestTreeViewer.SelectFileFromManifest(@"C:\Users\RSH\source\repos\FlexGuard\FlexGuard.CLI\bin\Debug\net8.0\Jobs\TestSmall\manifest_2025-07-23T2005.json");
-            //RestoreSelector.PromptRestoreFilesFromManifest(@"C:\Users\RSH\source\repos\FlexGuard\FlexGuard.CLI\bin\Debug\net8.0\Jobs\TestSmall\manifest_2025-07-23T2005.json");
-            //RestoreHelper.RestoreFile("C/Users/RSH/OneDrive/Billeder/_Templates/Tegninger.jpg", localJobsFolder, jobConfig, reporter);
             var registryManager2 = new BackupRegistryManager(options.JobName, localJobsFolder);
             var selector = new RestoreFileSelector(registryManager2.GetRegistry(), localJobsFolder);
             var selectedFiles = selector.SelectFiles();
+
+            foreach (var file in selectedFiles)
+            {
+                var chunkPath = Path.Combine(
+                    jobConfig.DestinationPath,
+                    file.BackupEntry.DestinationFolderName,
+                    file.ChunkFile);
+
+                RestoreHelper.RestoreFile(
+                    jobConfig.RestoreTargetFolder,
+                    chunkPath,
+                    file.RelativePath,
+                    file.Hash,
+                    reporter);
+            }
 
             return;
         }
@@ -45,7 +57,7 @@ class Program
         if (options.Mode == OperationMode.DifferentialBackup)
         {
             // set lastBackupTime manually for testing purposes
-            lastBackupTime = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+            lastBackupTime = new DateTime(2025, 5, 1, 0, 0, 0, DateTimeKind.Utc);
         }
 
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
