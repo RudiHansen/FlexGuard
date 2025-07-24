@@ -30,7 +30,7 @@ public class BackupRegistryManager
         var entry = new BackupRegistry.BackupEntry
         {
             TimestampStart = timestamp,
-            Type = mode.ToString()
+            Type = mode
         };
 
         _registry.Backups.Add(entry);
@@ -48,11 +48,11 @@ public class BackupRegistryManager
         var json = JsonSerializer.Serialize(_registry, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_registryPath, json);
     }
-    public BackupRegistry.BackupEntry? GetLatestEntry(string _type)
+    public BackupRegistry.BackupEntry? GetLatestEntry(OperationMode _type)
     {
         return _registry.Backups
             .OrderByDescending(e => e.TimestampStart)
-            .Where(e => e.Type.Equals(_type, StringComparison.OrdinalIgnoreCase))
+            .Where(e => e.Type == _type)
             .FirstOrDefault();
     }
     public BackupRegistry GetRegistry()

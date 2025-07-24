@@ -1,4 +1,3 @@
-using FlexGuard.CLI.Library;
 using FlexGuard.CLI.Restore;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
@@ -7,8 +6,6 @@ using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Restore;
 using FlexGuard.Core.Util;
-using Microsoft.Win32;
-using static FlexGuard.Core.Registry.BackupRegistry;
 
 class Program
 {
@@ -27,8 +24,6 @@ class Program
         var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
 
         var registryManager = new BackupRegistryManager(options.JobName, localJobsFolder);
-        var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
-        registryManager.Save();
 
         if (options.Mode == OperationMode.Restore)
         {
@@ -54,6 +49,9 @@ class Program
             return;
         }
 
+        var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
+        registryManager.Save();
+
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         reporter.Info("Create backup file list...");
         DateTime? lastBackupTime = null;
@@ -61,7 +59,7 @@ class Program
         if (options.Mode == OperationMode.DifferentialBackup)
         {
             // set lastBackupTime manually for testing purposes
-            lastBackupTime = new DateTime(2025, 5, 1, 0, 0, 0, DateTimeKind.Utc);
+            lastBackupTime = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc);
         }
 
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
@@ -78,7 +76,7 @@ class Program
         stopwatch.Stop();
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
-        var manifestBuilder = new BackupManifestBuilder(options.JobName, options.Mode);
+        var manifestBuilder = new BackupManifestBuilder(options.JobName, options.Mode, backupEntry.TimestampStart);
 
         stopwatch.Restart();
         reporter.Info("Processing file groups...");
@@ -98,6 +96,10 @@ class Program
         string manifestFileName = manifestBuilder.Save(localJobsFolder);
         backupEntry.TimestampEnd = DateTime.UtcNow;
         registryManager.Save();
+
+        File.Copy(Path.Combine(localJobsFolder, manifestFileName), Path.Combine(backupFolderPath, manifestFileName), overwrite: true);
+        File.Copy(Path.Combine(localJobsFolder, $"registry_{options.JobName}.json"), Path.Combine(backupFolderPath, $"registry_{options.JobName}.json"), overwrite: true);
+
         reporter.Success("Backup process completed successfully.");
         NotificationHelper.PlayBackupCompleteSound();
 

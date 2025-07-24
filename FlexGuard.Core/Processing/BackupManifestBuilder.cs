@@ -9,13 +9,13 @@ public class BackupManifestBuilder
 {
     private readonly BackupManifest _manifest;
 
-    public BackupManifestBuilder(string jobName, OperationMode mode)
+    public BackupManifestBuilder(string jobName, OperationMode mode, DateTime _timeStamp)
     {
         _manifest = new BackupManifest
         {
             JobName = jobName,
             Type = mode.ToString(),
-            Timestamp = DateTime.UtcNow
+            Timestamp = _timeStamp
         };
     }
 
