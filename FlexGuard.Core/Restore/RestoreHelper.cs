@@ -46,7 +46,7 @@ public static class RestoreHelper
         }
 
         // Locate chunk file
-        var chunkPath = Path.Combine(latestEntry.DestinationFolderName, entry.ChunkFile);
+        var chunkPath = Path.Combine(jobConfig.DestinationPath, latestEntry.DestinationFolderName, entry.ChunkFile);
         if (!File.Exists(chunkPath))
         {
             reporter.Error($"Chunk file '{chunkPath}' not found.");

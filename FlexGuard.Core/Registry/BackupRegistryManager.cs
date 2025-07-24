@@ -32,7 +32,7 @@ public class BackupRegistryManager
             Timestamp = timestamp,
             Type = mode.ToString(),
             ManifestFileName = manifestFileName,
-            DestinationFolderName = destinationFolderName
+            DestinationFolderName = Path.GetFileName(destinationFolderName)
         });
     }
 
