@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using FlexGuard.Core.Util;
+using System.Text.Json;
 
 namespace FlexGuard.Core.Config;
 
@@ -14,12 +15,7 @@ public static class JobLoader
 
         var json = File.ReadAllText(filePath);
 
-        var config = JsonSerializer.Deserialize<BackupJobConfig>(
-            json,
-            new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+        var config = JsonSerializer.Deserialize<BackupJobConfig>(json, JsonSettings.DeserializeIgnoreCase);
 
         return config ?? throw new InvalidOperationException($"Could not parse job config file: {filePath}");
     }
