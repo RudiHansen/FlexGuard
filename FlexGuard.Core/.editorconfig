@@ -1,0 +1,14 @@
+# top-most EditorConfig file
+root = true
+
+# C# files
+[*.cs]
+
+# Slå forslag fra om forenkling af collection-initialisering
+dotnet_diagnostic.IDE0090.severity = none
+
+# Slå forslag fra om forenkling af 'new' expression
+dotnet_diagnostic.IDE0028.severity = none
+dotnet_diagnostic.IDE0290.severity = none
+dotnet_diagnostic.IDE0300.severity = none
+dotnet_diagnostic.IDE0306.severity = none

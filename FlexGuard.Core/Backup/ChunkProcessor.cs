@@ -1,18 +1,16 @@
 ﻿using FlexGuard.Core.Manifest;
-using FlexGuard.Core.Model;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Reporting;
 using System.IO.Compression;
 using System.Security.Cryptography;
 
-namespace FlexGuard.Core.Processing;
+namespace FlexGuard.Core.Backup;
 
 public static class ChunkProcessor
 {
     public static void Process(
     FileGroup group,
     string backupFolderPath,
-    ProgramOptions options,
     IMessageReporter reporter,
     BackupManifestBuilder manifestBuilder)
     {

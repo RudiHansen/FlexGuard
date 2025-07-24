@@ -1,4 +1,4 @@
-﻿using FlexGuard.Core.Model;
+﻿using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Reporting;
 
 namespace FlexGuard.Core.Reporting;

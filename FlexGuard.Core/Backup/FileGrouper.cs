@@ -1,7 +1,7 @@
-﻿using FlexGuard.Core.Model;
+﻿using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Reporting;
 
-namespace FlexGuard.Core.Processing;
+namespace FlexGuard.Core.Backup;
 
 public static class FileGrouper
 {

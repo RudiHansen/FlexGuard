@@ -1,8 +1,8 @@
 using FlexGuard.CLI.Reporting;
 using FlexGuard.CLI.Restore;
+using FlexGuard.Core.Backup;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
-using FlexGuard.Core.Processing;
 using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Restore;
@@ -87,7 +87,7 @@ class Program
         foreach (var group in fileGroups)
         {
             reporter.Info($"Processing group {current} of {fileGroups.Count} with {group.Files.Count} files ({group.TotalSize / 1024 / 1024} MB)...");
-            ChunkProcessor.Process(group, backupFolderPath, options, reporter, manifestBuilder);
+            ChunkProcessor.Process(group, backupFolderPath, reporter, manifestBuilder);
             current++;
         }
         stopwatch.Stop();

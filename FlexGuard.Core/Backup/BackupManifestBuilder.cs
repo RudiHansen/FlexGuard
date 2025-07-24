@@ -1,9 +1,10 @@
-﻿using System.Text.Json;
-using FlexGuard.Core.Manifest;
-using FlexGuard.Core.Model;
+﻿using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Options;
+using FlexGuard.Core.Util;
+using Microsoft.Win32;
+using System.Text.Json;
 
-namespace FlexGuard.Core.Processing;
+namespace FlexGuard.Core.Backup;
 
 public class BackupManifestBuilder
 {
@@ -34,11 +35,7 @@ public class BackupManifestBuilder
             Directory.CreateDirectory(destinationFolder); // Sørger for at mappen findes
         }
 
-
-        var json = JsonSerializer.Serialize(_manifest, new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
+        var json = JsonSerializer.Serialize(_manifest, JsonSettings.Indented);
 
         File.WriteAllText(fullPath, json);
         return fileName;

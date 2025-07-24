@@ -1,12 +1,13 @@
-﻿using System.Text.Json;
-using FlexGuard.Core.Options;
+﻿using FlexGuard.Core.Options;
+using FlexGuard.Core.Util;
+using System.Text.Json;
 
 namespace FlexGuard.Core.Registry;
 
 public class BackupRegistryManager
 {
     private readonly string _registryPath;
-    private BackupRegistry _registry;
+    private readonly BackupRegistry _registry;
 
     public BackupRegistryManager(string jobName, string jobFolder)
     {
@@ -45,7 +46,7 @@ public class BackupRegistryManager
             Directory.CreateDirectory(directory); // Sørger for at mappen findes
         }
 
-        var json = JsonSerializer.Serialize(_registry, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(_registry, JsonSettings.Indented);
         File.WriteAllText(_registryPath, json);
     }
     public BackupRegistry.BackupEntry? GetLatestEntry(OperationMode _type)
