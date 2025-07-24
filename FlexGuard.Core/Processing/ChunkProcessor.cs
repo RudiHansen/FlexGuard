@@ -12,7 +12,6 @@ public static class ChunkProcessor
     public static void Process(
     FileGroup group,
     string backupFolderPath,
-    ProgramOptions options,
     IMessageReporter reporter,
     BackupManifestBuilder manifestBuilder)
     {

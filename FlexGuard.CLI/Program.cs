@@ -87,7 +87,7 @@ class Program
         foreach (var group in fileGroups)
         {
             reporter.Info($"Processing group {current} of {fileGroups.Count} with {group.Files.Count} files ({group.TotalSize / 1024 / 1024} MB)...");
-            ChunkProcessor.Process(group, backupFolderPath, options, reporter, manifestBuilder);
+            ChunkProcessor.Process(group, backupFolderPath, reporter, manifestBuilder);
             current++;
         }
         stopwatch.Stop();

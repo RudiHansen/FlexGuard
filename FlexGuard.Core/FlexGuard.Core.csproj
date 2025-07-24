@@ -10,4 +10,12 @@
     <PackageReference Include="System.Windows.Extensions" Version="9.0.7" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EditorConfigFiles Remove="C:\Users\RSH\source\repos\FlexGuard\FlexGuard.Core\.editorconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="C:\Users\RSH\source\repos\FlexGuard\FlexGuard.Core\.editorconfig" />
+  </ItemGroup>
+
 </Project>

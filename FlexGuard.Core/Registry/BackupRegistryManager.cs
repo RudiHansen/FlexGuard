@@ -7,7 +7,7 @@ namespace FlexGuard.Core.Registry;
 public class BackupRegistryManager
 {
     private readonly string _registryPath;
-    private BackupRegistry _registry;
+    private readonly BackupRegistry _registry;
 
     public BackupRegistryManager(string jobName, string jobFolder)
     {
