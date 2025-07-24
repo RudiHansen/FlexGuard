@@ -14,6 +14,7 @@ class Program
     {
         var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
+        var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         var options = new ProgramOptions("TestSmall", OperationMode.FullBackup);
         //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
@@ -101,6 +102,9 @@ class Program
 
         File.Copy(Path.Combine(localJobsFolder, manifestFileName), Path.Combine(backupFolderPath, manifestFileName), overwrite: true);
         File.Copy(Path.Combine(localJobsFolder, $"registry_{options.JobName}.json"), Path.Combine(backupFolderPath, $"registry_{options.JobName}.json"), overwrite: true);
+
+        totalStopwatch.Stop();
+        PerfLogger.Log(options.JobName, options.Mode, options.Compression, allFiles.Count, fileGroups.Count, totalStopwatch.Elapsed);
 
         reporter.Success("Backup process completed successfully.");
         NotificationHelper.PlayBackupCompleteSound();
