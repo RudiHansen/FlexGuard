@@ -1,11 +1,10 @@
 ﻿using FlexGuard.Core.Manifest;
-using FlexGuard.Core.Model;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Util;
 using Microsoft.Win32;
 using System.Text.Json;
 
-namespace FlexGuard.Core.Processing;
+namespace FlexGuard.Core.Backup;
 
 public class BackupManifestBuilder
 {

@@ -1,4 +1,4 @@
-﻿namespace FlexGuard.Core.Model;
+﻿namespace FlexGuard.Core.Manifest;
 
 public class FileGroup
 {

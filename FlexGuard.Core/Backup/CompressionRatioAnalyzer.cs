@@ -1,7 +1,7 @@
-﻿using FlexGuard.Core.Model;
+﻿using FlexGuard.Core.Manifest;
 using System.IO.Compression;
 
-namespace FlexGuard.Core.Analysis;
+namespace FlexGuard.Core.Backup;
 
 public static class CompressionRatioAnalyzer
 {
