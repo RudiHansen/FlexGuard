@@ -44,6 +44,7 @@ class Program
                     chunkPath,
                     file.RelativePath,
                     file.Hash,
+                    file.Compression,
                     reporter);
             }
 
@@ -77,7 +78,7 @@ class Program
         stopwatch.Stop();
         reporter.Info($"Duration: {stopwatch.Elapsed:hh\\:mm\\:ss}");
 
-        var manifestBuilder = new BackupManifestBuilder(options.JobName, options.Mode, backupEntry.TimestampStart);
+        var manifestBuilder = new BackupManifestBuilder(options.JobName, options.Mode, backupEntry.TimestampStart, options.Compression);
 
         stopwatch.Restart();
         reporter.Info("Processing file groups...");

@@ -1,7 +1,7 @@
-﻿using FlexGuard.Core.Manifest;
+﻿using FlexGuard.Core.Compression;
+using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Util;
-using Microsoft.Win32;
 using System.Text.Json;
 
 namespace FlexGuard.Core.Backup;
@@ -9,14 +9,16 @@ namespace FlexGuard.Core.Backup;
 public class BackupManifestBuilder
 {
     private readonly BackupManifest _manifest;
+    public CompressionMethod Compression => _manifest.Compression;
 
-    public BackupManifestBuilder(string jobName, OperationMode mode, DateTime _timeStamp)
+    public BackupManifestBuilder(string jobName, OperationMode mode, DateTime timestamp, CompressionMethod compression)
     {
         _manifest = new BackupManifest
         {
             JobName = jobName,
             Type = mode.ToString(),
-            Timestamp = _timeStamp
+            Timestamp = timestamp,
+            Compression = compression
         };
     }
 

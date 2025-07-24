@@ -1,4 +1,5 @@
-﻿using FlexGuard.Core.Reporting;
+﻿using FlexGuard.Core.Compression;
+using FlexGuard.Core.Reporting;
 using System.IO.Compression;
 using System.Security.Cryptography;
 
@@ -11,6 +12,7 @@ public static class RestoreHelper
         string chunkFilePath,
         string relativePath,
         string expectedHash,
+        CompressionMethod compressionMethod,
         IMessageReporter reporter)
     {
         if (string.IsNullOrWhiteSpace(restoreTargetFolder))
@@ -27,10 +29,16 @@ public static class RestoreHelper
 
         try
         {
-            // Open chunk and decompress
+            // Create the correct decompressor
+            var compressor = CompressorFactory.Create(compressionMethod);
+
+            // Open chunk and decompress to memory
             using var chunkStream = new FileStream(chunkFilePath, FileMode.Open, FileAccess.Read);
-            using var gzipStream = new GZipStream(chunkStream, CompressionMode.Decompress);
-            using var zipArchive = new ZipArchive(gzipStream, ZipArchiveMode.Read);
+            using var decompressedStream = new MemoryStream();
+            compressor.Decompress(chunkStream, decompressedStream);
+            decompressedStream.Position = 0;
+
+            using var zipArchive = new ZipArchive(decompressedStream, ZipArchiveMode.Read);
 
             var zipEntry = zipArchive.GetEntry(relativePath);
             if (zipEntry == null)

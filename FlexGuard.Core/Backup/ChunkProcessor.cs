@@ -1,5 +1,5 @@
-﻿using FlexGuard.Core.Manifest;
-using FlexGuard.Core.Options;
+﻿using FlexGuard.Core.Compression;
+using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Reporting;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -9,10 +9,10 @@ namespace FlexGuard.Core.Backup;
 public static class ChunkProcessor
 {
     public static void Process(
-    FileGroup group,
-    string backupFolderPath,
-    IMessageReporter reporter,
-    BackupManifestBuilder manifestBuilder)
+        FileGroup group,
+        string backupFolderPath,
+        IMessageReporter reporter,
+        BackupManifestBuilder manifestBuilder)
     {
         var chunkFileName = $"{group.Index:D4}.fgchunk";
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
@@ -20,7 +20,7 @@ public static class ChunkProcessor
         Directory.CreateDirectory(backupFolderPath);
         reporter.Info($"Processing chunk {group.Index} with {group.Files.Count} files ({group.GroupType})...");
 
-        // Determine ZIP compression level based on group type
+        // Determine ZIP compression level based on group type (internal to the ZIP)
         var zipCompressionLevel = group.GroupType switch
         {
             FileGroupType.LargeNonCompressible or FileGroupType.HugeNonCompressible or FileGroupType.SmallNonCompressible =>
@@ -28,6 +28,9 @@ public static class ChunkProcessor
             _ =>
                 CompressionLevel.Optimal
         };
+
+        // Select outer compressor based on the manifest (GZip, Brotli, Zstd)
+        var compressor = CompressorFactory.Create(manifestBuilder.Compression);
 
         // Step 1: Create temporary zip file
         var tempZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -73,13 +76,12 @@ public static class ChunkProcessor
                 }
             }
 
-            // Step 2: GZip-compress the ZIP file
+            // Step 2: Compress the ZIP file with the selected outer compressor
             using var zipInput = new FileStream(tempZipPath, FileMode.Open, FileAccess.Read);
             using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-            using var gzipStream = new GZipStream(outStream, CompressionLevel.Optimal);
-            zipInput.CopyTo(gzipStream);
+            compressor.Compress(zipInput, outStream);
 
-            reporter.Info($"Chunk {group.Index} written to '{outputPath}'");
+            reporter.Info($"Chunk {group.Index} written to '{outputPath}' using {compressor.Name}");
         }
         catch (Exception ex)
         {

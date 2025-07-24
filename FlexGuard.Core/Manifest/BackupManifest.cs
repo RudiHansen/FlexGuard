@@ -1,3 +1,5 @@
+using FlexGuard.Core.Compression;
+
 namespace FlexGuard.Core.Manifest;
 
 public class BackupManifest
@@ -5,6 +7,8 @@ public class BackupManifest
     public required string JobName { get; set; }
     public required string Type { get; set; } = "Full";
     public required DateTime Timestamp { get; set; }
+    public CompressionMethod Compression { get; set; }
+
     public List<FileEntry> Files { get; set; } = new();
 }
 

@@ -1,4 +1,6 @@
-﻿namespace FlexGuard.Core.Options;
+﻿using FlexGuard.Core.Compression;
+
+namespace FlexGuard.Core.Options;
 
 public class ProgramOptions
 {
@@ -8,6 +10,7 @@ public class ProgramOptions
     public int MaxFilesPerGroup { get; init; } = 1000;
     public long MaxBytesPerGroup { get; init; } = 1024 * 1024 * 1024; // 1 Gb
     public bool EnableCompressionRatioMeasurement { get; init; } = false;
+    public CompressionMethod Compression { get; init; } = CompressionMethod.GZip;
 
     public ProgramOptions(string jobName, OperationMode mode)
     {

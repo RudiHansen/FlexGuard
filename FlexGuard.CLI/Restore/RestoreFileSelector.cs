@@ -1,4 +1,5 @@
-﻿using FlexGuard.Core.Manifest;
+﻿using FlexGuard.Core.Compression;
+using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Registry;
 using Spectre.Console;
 using System.Text.Json;
@@ -20,7 +21,8 @@ public class RestoreFileSelector
         string RelativePath,
         string ChunkFile,
         string Hash,
-        BackupRegistry.BackupEntry BackupEntry);
+        BackupRegistry.BackupEntry BackupEntry,
+        CompressionMethod Compression);
 
     public List<RestoreSelection> SelectFiles()
     {
@@ -60,14 +62,15 @@ public class RestoreFileSelector
                 .InstructionsText("[grey](Press [blue]<space>[/] to toggle a file, [green]<enter>[/] to accept)[/]")
                 .AddChoices(allFiles));
 
-        // 4. Match back to full manifest entries
+        // 4. Match back to full manifest entries, including compression method
         var selections = manifest.Files
             .Where(f => selectedPaths.Contains(f.RelativePath))
             .Select(f => new RestoreSelection(
                 f.RelativePath,
                 f.ChunkFile,
                 f.Hash,
-                manifestEntry))
+                manifestEntry,
+                manifest.Compression))  // Include compression method
             .ToList();
 
         return selections;
