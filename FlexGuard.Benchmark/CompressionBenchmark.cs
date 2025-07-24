@@ -97,13 +97,24 @@ namespace FlexGuard.Benchmark
             long totalSize = 0;
             foreach (var file in files)
             {
-                using var input = File.OpenRead(file);
-                using var ms = new MemoryStream();
-                using (var gzip = new GZipStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+                try
                 {
-                    input.CopyTo(gzip);
+                    using var input = File.OpenRead(file);
+                    using var ms = new MemoryStream();
+                    using (var gzip = new GZipStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+                    {
+                        input.CopyTo(gzip);
+                    }
+                    totalSize += ms.Length;
                 }
-                totalSize += ms.Length;
+                catch (IOException)
+                {
+                    // Skip unreadable files silently
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Skip files without read permissions silently
+                }
             }
             return totalSize;
         }
@@ -113,13 +124,24 @@ namespace FlexGuard.Benchmark
             long totalSize = 0;
             foreach (var file in files)
             {
-                using var input = File.OpenRead(file);
-                using var ms = new MemoryStream();
-                using (var brotli = new BrotliStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+                try
                 {
-                    input.CopyTo(brotli);
+                    using var input = File.OpenRead(file);
+                    using var ms = new MemoryStream();
+                    using (var brotli = new BrotliStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+                    {
+                        input.CopyTo(brotli);
+                    }
+                    totalSize += ms.Length;
                 }
-                totalSize += ms.Length;
+                catch (IOException)
+                {
+                    // Skip unreadable files silently
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Skip files without read permissions silently
+                }
             }
             return totalSize;
         }
@@ -130,13 +152,23 @@ namespace FlexGuard.Benchmark
             using var compressor = new Compressor(level: 3); // 1=fast, 22=best compression
             foreach (var file in files)
             {
-                var data = File.ReadAllBytes(file);
-                var compressed = compressor.Wrap(data);
-                totalSize += compressed.Length;
+                try
+                {
+                    var data = File.ReadAllBytes(file);
+                    var compressed = compressor.Wrap(data);
+                    totalSize += compressed.Length;
+                }
+                catch (IOException)
+                {
+                    // Skip unreadable files silently
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Skip files without read permissions silently
+                }
             }
             return totalSize;
         }
-
         private static void SaveResultsToCsv(List<BenchmarkResult> results, string baseFileName = "compression_benchmark")
         {
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HHmm");
