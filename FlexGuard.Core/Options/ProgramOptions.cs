@@ -17,6 +17,15 @@ public class ProgramOptions
         JobName = jobName;
         Mode = mode;
     }
+    public ProgramOptions(string jobName,OperationMode mode,int maxFilesPerGroup,long maxBytesPerGroup,bool enableCompressionRatioMeasurement,CompressionMethod compression)
+    {
+        JobName = jobName ?? throw new ArgumentNullException(nameof(jobName));
+        Mode = mode;
+        MaxFilesPerGroup = maxFilesPerGroup;
+        MaxBytesPerGroup = maxBytesPerGroup;
+        EnableCompressionRatioMeasurement = enableCompressionRatioMeasurement;
+        Compression = compression;
+    }
 }
 
 public enum OperationMode

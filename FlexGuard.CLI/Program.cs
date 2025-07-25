@@ -1,3 +1,4 @@
+using FlexGuard.CLI.Options;
 using FlexGuard.CLI.Reporting;
 using FlexGuard.CLI.Restore;
 using FlexGuard.Core.Backup;
@@ -17,12 +18,25 @@ class Program
         reporter.Info("Starting FlexGuard backup...");
         var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        //var options = new ProgramOptions("TestSmall", OperationMode.FullBackup);
-        //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
-        var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
-        //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
+        ProgramOptions? options;
+        if (args.Length > 0)
+        {
+            options = ProgramOptionsParser.Parse(args, reporter);
+            if (options == null)
+            {
+                return; // Exit hvis help eller version blev vist
+            }
+        }
+        else
+        {
+            //var options = new ProgramOptions("TestSmall", OperationMode.FullBackup);
+            //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
+            options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
+            //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
+            options.Compression = CompressionMethod.Zstd;
+        }
+
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
-        options.Compression = CompressionMethod.Zstd;
 
         BackupJobConfig jobConfig = JobLoader.Load(options.JobName);
         var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
