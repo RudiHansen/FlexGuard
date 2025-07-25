@@ -35,6 +35,18 @@ FlexGuard was created to address the limitations of traditional backup tools. Ex
 
 ---
 
+## 🏗️ Project Structure
+
+FlexGuard is organized into multiple projects:
+
+- **FlexGuard.Core** – Core backup and restore logic (chunking, compression, hashing, manifests).
+- **FlexGuard.CLI** – Command-line interface, argument parsing, and interactive restore selector.
+- **FlexGuard.Benchmark** – Performance and compression benchmark utilities.
+- **FlexGuard.UI** *(planned)* – Windows Forms-based UI for job management and restores.
+- **FlexGuard.Tests** *(planned)* – Unit and integration tests.
+
+---
+
 ## 🚀 Quick Start
 
 ### Requirements
