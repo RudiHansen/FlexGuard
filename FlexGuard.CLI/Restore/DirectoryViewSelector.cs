@@ -1,4 +1,6 @@
 ﻿using Spectre.Console;
+using System.IO;
+using System.Linq;
 
 namespace FlexGuard.CLI.Restore;
 
@@ -11,8 +13,8 @@ public static class DirectoryViewSelector
     }
 
     /// <summary>
-    /// Displays a directory selection UI with [Tab] to switch between Directory View (folders only)
-    /// and Tree View (folders + files). Returns the final list of selected files.
+    /// Displays a menu-based UI to switch between Directory View and Tree View.
+    /// Returns the final list of selected files.
     /// </summary>
     public static List<string> Show(List<string> allFiles)
     {
@@ -22,48 +24,45 @@ public static class DirectoryViewSelector
 
         while (true)
         {
-            // Build a list of choices depending on the current view mode
+            // Show the main menu
+            var menuChoice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[green]Select view mode or finish[/]:")
+                    .AddChoices(
+                        currentView == ViewMode.Directory ? "▶ Directory View (current)" : "Directory View",
+                        currentView == ViewMode.Tree ? "▶ Tree View (current)" : "Tree View",
+                        "Finish and Restore"));
+
+            if (menuChoice.StartsWith("Finish"))
+                break; // Done, exit loop
+
+            // Determine selected view
+            currentView = menuChoice.StartsWith("Directory") ? ViewMode.Directory : ViewMode.Tree;
+
+            // Build a list of choices for this view
             var items = currentView == ViewMode.Directory
                 ? GetDirectoriesOnly(root)
                 : GetDirectoriesAndFiles(root);
 
-            // Display current view mode
-            AnsiConsole.MarkupLine($"[grey]View mode:[/] [yellow]{currentView} View[/] (Press [blue]<Tab>[/] to switch)");
-
-            // Display selection prompt
+            // Show selection prompt
             var prompt = new MultiSelectionPrompt<string>()
-                .Title("Select [green]files or folders[/] to restore")
+                .Title($"Select [green]items[/] to restore - [yellow]{currentView} View[/]")
                 .NotRequired()
                 .PageSize(15)
                 .MoreChoicesText("[grey](Move up/down to reveal more items)[/]")
-                .InstructionsText("[grey](Press [blue]<space>[/] to toggle, [blue]<Tab>[/] to switch view, [green]<enter>[/] to accept)[/]")
+                .InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to confirm)[/]")
                 .AddChoices(items);
 
-            // Preselect previously chosen items (intersection)
-            prompt.AddChoices(items);
-
-            // Preselect previously chosen items
+            // Preselect already chosen items
             foreach (var item in selectedItems.Intersect(items))
-            {
                 prompt.Select(item);
-            }
 
             var choice = AnsiConsole.Prompt(prompt);
 
-            // Detect if the user pressed [Tab] to switch view
-            var lastKey = AnsiConsole.Console.Input.ReadKey(true);
-            if (lastKey.HasValue && lastKey.Value.Key == ConsoleKey.Tab)
-            {
-                // Update selectedItems
-                foreach (var c in choice) selectedItems.Add(c);
-                currentView = currentView == ViewMode.Directory ? ViewMode.Tree : ViewMode.Directory;
-                AnsiConsole.Clear();
-                continue;
-            }
-
-            // Final selection when user presses [Enter]
-            foreach (var c in choice) selectedItems.Add(c);
-            break;
+            // Update selected items
+            selectedItems.RemoveWhere(x => items.Contains(x)); // Clear old selections from this view
+            foreach (var c in choice)
+                selectedItems.Add(c);
         }
 
         // Expand all selected directories to individual files
