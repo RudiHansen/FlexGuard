@@ -361,3 +361,14 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Visual Studio launch settings
+**/Properties/launchSettings.json
+
+# Jobs configuration
+**/jobs*.json
+!**/job_default.json
+/FlexGuard.CLI/Jobs/job_Test1.json
+/FlexGuard.CLI/Jobs/job_TestExLarge.json
+/FlexGuard.CLI/Jobs/job_TestLarge.json
+/FlexGuard.CLI/Jobs/job_TestSmall.json
