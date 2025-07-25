@@ -123,7 +123,7 @@ cp job_default.json my_job.json
 | Argument                | Description                                    |
 |-------------------------|------------------------------------------------|
 | `--jobname <name>`      | Specifies the backup job name.                  |
-| `--mode <full|diff|restore>` | Backup mode: Full, Differential, or Restore. |
+| `--mode <full\|diff\|restore>` | Backup mode: Full, Differential, or Restore. |
 | `--maxfiles <number>`   | Max number of files per chunk group. (Default: 1000)|
 | `--maxbytes <size>`     | Max total size per chunk group. (Default: 1GB)  |
 | `--compression <method>`| Compression method: gzip, brotli, zstd. (Default Zstd) |
