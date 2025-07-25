@@ -1,0 +1,186 @@
+PROJECT: FlexGuard – A modular and advanced backup tool
+GitHub Repository: https://github.com/RudiHansen/FlexGuard
+
+DESCRIPTION
+FlexGuard is a flexible, efficient, and version-aware backup system designed to minimize data duplication, support recovery of older file versions, and resist attacks targeting backup data.
+
+WHY FLEXGUARD
+FlexGuard was created to address limitations found in traditional backup tools. 
+Existing solutions often:
+- Duplicate large amounts of unchanged data, wasting storage and time.
+- Provide limited control over compression and file grouping.
+- Lack clear versioning and the ability to restore older file states efficiently.
+- Fail to handle ransomware resilience or WORM-like protection out of the box.
+- Do not integrate well with modern workflows involving multiple storage targets (NAS, cloud, USB).
+
+The goal of FlexGuard is to create a lightweight, transparent, and modular backup solution 
+tailored for both personal and professional use, with a focus on:
+- Efficient differential backups.
+- Fine-grained file versioning.
+- High performance through chunking and modern compression methods.
+- Flexibility to integrate with any storage backend.
+- Simple restore options with clear file selection.
+
+KEY FEATURES
+- Full backup (monthly) and daily differential backup with file-level change detection.
+- Only a single copy of each file is stored; future versions will store changes as diffs.
+- Multiple backup destinations supported: NAS, OneDrive, USB disk (SCP/SSH planned).
+- Configuration driven by job_default.json template (user can copy and customize for each job).
+- Write-Once-like protection strategy against tampering/ransomware (planned).
+- Ability to restore older file versions.
+- Chunk-based backup: files are grouped and stored as compressed chunks (.fgchunk).
+- Compression strategy can adapt to file type and size (previously implemented but currently disabled, easy to re-enable).
+- Pluggable compression backends: GZip, Brotli, Zstd (Zstd recommended by default).
+- SHA-256 checksums to ensure data integrity.
+- Very low memory usage (< 100 MB) via streaming and temporary files.
+- Modular architecture: components are replaceable and testable.
+- Registry + manifest are copied into the backup folder for extra safety.
+- Performance logging (PerfLogger) per job: JobName, Mode, Compression, FileCount, GroupCount, TotalTime.
+
+TECHNICAL ARCHITECTURE
+- .NET 8 Console Application (CLI).
+- Spectre.Console for rich TUI, prompts, and colored output.
+- Centralized versioning via Directory.Build.props (Version, FileVersion, AssemblyVersion).
+- VersionHelper trims Git hash suffixes from AssemblyInformationalVersion.
+- ProgramOptionsParser with manual argument parsing (no external deps).
+- Chunk- and manifest-based storage model with JSON metadata.
+- Compression strategy can be adapted per file type/size.
+- SHA-256 for validation and change detection.
+- Logging abstraction via IMessageReporter; MessageReporterConsole writes to console and file.
+- File grouping and chunk processing handled by FileGrouper and ChunkProcessor classes.
+- Currently supports Windows (Linux support is planned for a future release).
+
+CLI & ARGUMENT PARSING
+- Supports: --jobname, --mode (full|diff|restore), --maxfiles, --maxbytes, --compression (gzip|brotli|zstd), --measure-compression (planned, not yet implemented).
+- Help switches: /?, /h, -h, --help.
+- Version switches: -v, --version.
+- Fallback to default test options when no args are supplied (dev convenience).
+
+CONFIGURATION
+- FlexGuard uses a JSON-based job configuration file to define backup sources, destinations, and restore targets.
+- The file job_default.json is included as a template and should be copied and customized for each job.
+
+Fields:
+  JobName:
+    A unique name for the backup job (e.g., "PhotosBackup").
+  Sources:
+    A list of source folders to include in the backup.
+    Each entry includes:
+      Path: Absolute or relative path to the folder to back up.
+      Exclude: A list of patterns or folder names to skip (e.g., ["*.tmp", "bin", "obj"]).
+  DestinationPath:
+    The directory where backup chunks, manifests, and logs will be stored.
+  RestoreTargetFolder:
+    When performing a restore, this folder is where selected files will be restored.
+
+Example:
+{
+  "JobName": "default",
+  "Sources": [
+    {
+      "Path": "C:/Temp",
+      "Exclude": [ "*.tmp", "bin", "obj" ]
+    },
+    {
+      "Path": "D:/Projects",
+      "Exclude": [ "bin", "obj" ]
+    }
+  ],
+  "DestinationPath": "E:/Backups/FlexGuard",
+  "RestoreTargetFolder": "C:/RestoredFiles"
+}
+
+RESTORE FILE SELECTOR
+- Two hierarchical views:
+  * Directory View (folders only).
+  * Tree View (folders + files).
+- Switching between views via menu loop (stable alternative to key interception).
+- Multi-select with:
+  * Filter list (case-insensitive contains).
+  * Select all items.
+  * Clear all selections.
+- Selections persist across view switches (directories expand to files automatically when entering Tree View).
+- Robust add/remove logic (string-prefix based) to include/exclude all files and subfolders correctly.
+- Footer status line at the bottom of the console showing counts:
+  Selected: <dirs> directories, <files> files (of <totalDirs> dirs, <totalFiles> files)
+
+PERFORMANCE / OPTIMIZATIONS
+- Zstd reduces runtime by >60% vs. GZip (measured).
+- Release builds provide additional improvements.
+- ChunkProcessor uses temp files instead of RAM to keep memory usage consistently low.
+
+CODE QUALITY & TOOLING
+- Global .editorconfig placed at solution root; local analyzer suppressions consolidated.
+- Common IDE analyzer rules disabled where producing noise (IDE00xx, etc.).
+- launchSettings.json excluded from git to avoid leaking local/dev-sensitive data.
+- jobs*.json excluded; a neutral template job_default.json is included.
+- Directory.Build.props used to ensure global version consistency across projects.
+
+SECURITY & INTEGRITY (PLANNED)
+- Avoid double compression.
+- Hash per chunk-file (not just per logical file entry).
+- Optional encryption at rest (e.g., AES-256) for backup payloads and/or manifests.
+- Signed manifests (integrity + authenticity).
+- WORM-like protection on destination (filesystem ACLs, immutability flags where available).
+- Restore safety checks (dry-run, overwrite policy, collision strategy).
+
+DEVELOPMENT PLAN (HIGH LEVEL)
+- CLI with full + differential backup (done).
+- Chunk-based restore logic with per-file hash validation (done).
+- CLI argument parsing with help/version (done).
+- Advanced restore selector with directory/tree views, filter, select-all, bottom status (done, minor errors).
+- File diff/versioning to avoid full duplication (planned).
+- UI layer (Windows Forms or alternative) (planned).
+- Multiple backup destinations supported: NAS, OneDrive, USB disk (SCP/SSH planned).
+- CI/CD (GitHub Actions), automated versioning/tags, release packaging (planned/possibly).
+- Add Linux support and cross-platform testing (planned).
+
+KNOWN GAPS / OPEN ITEMS
+- No diff-based storage (yet); only full vs differential backup mode.
+- No encryption/signing of manifests/chunks yet.
+- No retention/cleanup policy logic (e.g., keep N full backups, prune old diffs).
+- No cloud/on-premises remote sync integration yet.
+- No VSS integration for locked files (Windows) yet.
+- No end-to-end resumable backup for partially interrupted runs (metadata exists: TimestampStart/End).
+- Limited unit/integration test coverage (expand planned).
+
+CHANGE HISTORY
+v0.1 (Initial Prototype)
+- Basic structure for full and differential backups.
+- First implementation of chunk-based storage.
+- Initial GZip compression support.
+
+v0.2 (Stability & Performance)
+- Large cleanup of old/unused code.
+- Introduced Brotli and Zstd compressors, with Zstd as recommended default.
+- Added BackupRegistry and manifest files with start/end timestamps to detect and resume/inspect interrupted backups.
+- Copy of registry + manifest into backup folder for redundancy.
+- Implemented PerfLogger for per-job statistics (JobName, Mode, Compression, FileCount, GroupCount, TotalTime).
+- ChunkProcessor optimized with temporary files for low memory usage (< 100 MB).
+
+v0.3 (Beta)
+- Implemented CLI argument parsing (ProgramOptionsParser) with /?, /h, -h, --help.
+- Added VersionHelper and centralized semantic versioning with Directory.Build.props. Strips Git hash (+xxxx) when displayed.
+- MessageReporterConsole for consistent console/file logging with debug toggles.
+- Enhanced RestoreFileSelector:
+  * Directory and Tree View modes with persistent selections.
+  * Filtering with case-insensitive contains.
+  * Select-all and clear-all.
+  * Footer status showing selected/total files and directories.
+  * Robust add/remove logic for directories (RemoveAllUnder / AddAllUnder).
+- Verified restore logic with per-file hash validation.
+- Significant performance boost due to Zstd compression (over 60% faster than GZip).
+
+PLANNED v0.4 / NEXT
+- Hash per chunk file and optional manifest signing.
+
+
+TODO / FUTURE WORK
+- Remote/cloud targets SCP/SSH
+- Test suite expansion: unit tests for parsers/selectors, integration tests for end-to-end backup/restore.
+- VSS (Windows) integration for locked/open files.
+- Snapshot/transactional consistency for manifests.
+- Diff-based storage for file versioning (avoid full re-duplication).
+- Encryption-at-rest option for manifests and chunks.
+- Retention policies and automatic pruning (N full backups, prune old diffs).
+- Smarter restore: optionally rehydrate only new/changed files from diffs automatically.
