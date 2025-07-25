@@ -19,6 +19,9 @@
     <None Update="FlexGuard_Backup_Complete_Retro.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Jobs\job_default.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Jobs\job_TestSmall.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
