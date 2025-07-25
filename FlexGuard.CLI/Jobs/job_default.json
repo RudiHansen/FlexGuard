@@ -1,0 +1,15 @@
+{
+  "JobName": "default",
+  "Sources": [
+    {
+      "Path": "C:/Temp",
+      "Exclude": [ "*.tmp", "bin", "obj" ]
+    },
+    {
+      "Path": "",
+      "Exclude": []
+    }
+  ],
+  "DestinationPath": "",
+  "RestoreTargetFolder": ""
+}
