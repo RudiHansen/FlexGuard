@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Planned v0.4 / Next]
+- Fix error when lastBackupTime was hardcoded, now it takes the latest backup time from the manifest.(Done)
 - Diff-based storage for file versioning (avoid full re-duplication).
 - Hash per chunk file and optional manifest signing.
 - Transaction-safe manifest writes (atomic/temporary file then swap).

@@ -49,6 +49,12 @@ public class BackupRegistryManager
         var json = JsonSerializer.Serialize(_registry, JsonSettings.Indented);
         File.WriteAllText(_registryPath, json);
     }
+    public BackupRegistry.BackupEntry? GetLatestEntry()
+    {
+        return _registry.Backups
+            .OrderByDescending(e => e.TimestampStart)
+            .FirstOrDefault();
+    }
     public BackupRegistry.BackupEntry? GetLatestEntry(OperationMode _type)
     {
         return _registry.Backups

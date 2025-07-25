@@ -68,18 +68,20 @@ class Program
             return;
         }
 
-        var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
-        registryManager.Save();
-
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         reporter.Info("Create backup file list...");
         DateTime? lastBackupTime = null;
 
         if (options.Mode == OperationMode.DifferentialBackup)
         {
+            var lastBackupEntry = registryManager.GetLatestEntry();
+            lastBackupTime = lastBackupEntry?.TimestampStart;
+
             // set lastBackupTime manually for testing purposes
-            lastBackupTime = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+            //lastBackupTime = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc);
         }
+        var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
+        registryManager.Save();
 
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
         FileListReporter.ReportSummary(allFiles, reporter);
