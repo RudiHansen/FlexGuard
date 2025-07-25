@@ -26,6 +26,8 @@ public class RestoreFileSelector
 
     public List<RestoreSelection> SelectFiles()
     {
+        AnsiConsole.Clear();
+
         // 1. Let user select which backup to restore from
         var manifestEntry = AnsiConsole.Prompt(
             new SelectionPrompt<BackupRegistry.BackupEntry>()

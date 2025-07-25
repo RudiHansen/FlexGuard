@@ -116,6 +116,16 @@ public static class DirectoryViewSelector
                 .Where(i => string.IsNullOrEmpty(currentFilter) || i.Contains(currentFilter, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
+            // Calculate selection stats
+            int totalDirs = items.Count(i => i.EndsWith(Path.DirectorySeparatorChar));
+            int totalFiles = items.Count - totalDirs;
+            int selectedDirs = selectedItems.Count(i => i.EndsWith(Path.DirectorySeparatorChar));
+            int selectedFiles = selectedItems.Count - selectedDirs;
+
+            // Display selection status
+            AnsiConsole.MarkupLine(
+                $"[grey]Selected:[/] [yellow]{selectedDirs} directories[/], [yellow]{selectedFiles} files[/] [grey](of {totalDirs} dirs, {totalFiles} files)[/]");
+
             // Display multi-selection prompt
             var prompt = new MultiSelectionPrompt<string>()
                 .Title($"Select [green]items[/] to restore - [yellow]{currentView} View[/]")
