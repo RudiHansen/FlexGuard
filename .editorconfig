@@ -1,0 +1,48 @@
+# top-most EditorConfig file
+root = true
+
+# General
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+charset = utf-8
+
+# C# files
+[*.cs]
+
+dotnet_diagnostic.IDE0017.severity = none
+dotnet_diagnostic.IDE0028.severity = none
+dotnet_diagnostic.IDE0090.severity = none
+dotnet_diagnostic.IDE0290.severity = none
+dotnet_diagnostic.IDE0300.severity = none
+dotnet_diagnostic.IDE0305.severity = none
+dotnet_diagnostic.IDE0306.severity = none
+
+# Enables Roslyn analyzers for better code analysis (detects potential issues and code smells)
+dotnet_enable_roslyn_analyzers = true
+
+# Sets all diagnostics in the NullableAnalysis category to "warning"
+# Helps catch nullability issues (e.g., potential null reference exceptions)
+dotnet_analyzer_diagnostic.category-NullableAnalysis.severity = warning
+
+# Places a new line before all opening braces ('{') in classes, methods, properties, etc.
+# Example:
+#   if (x)
+#   {
+#       ...
+#   }
+csharp_new_line_before_open_brace = all
+
+# Indents the contents of case sections in switch statements
+# Example:
+#   switch (x)
+#   {
+#       case 1:
+#           DoSomething();
+#           break;
+#   }
+csharp_indent_case_contents = true
+
+# Indents the case labels in switch statements
+# If set to false, case labels will not be indented.
+csharp_indent_switch_labels = true

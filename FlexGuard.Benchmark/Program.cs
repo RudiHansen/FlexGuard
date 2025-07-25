@@ -2,7 +2,7 @@
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             string testFolder = @"C:\Users\RSH\OneDrive"; // Ret hvis du vil teste noget andet
             CompressionBenchmark.Run(testFolder);
