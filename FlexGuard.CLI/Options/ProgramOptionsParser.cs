@@ -49,10 +49,16 @@ public static class ProgramOptionsParser
                         break;
 
                     case "mode":
-                        if (Enum.TryParse<OperationMode>(value, true, out var mode))
-                            options.Mode = mode;
-                        else
-                            throw new ArgumentException($"Invalid value for --mode: {value}");
+                        if (string.IsNullOrWhiteSpace(value))
+                            throw new ArgumentException("Missing value for --mode");
+
+                        options.Mode = value.ToLowerInvariant() switch
+                        {
+                            "full" => OperationMode.FullBackup,
+                            "diff" or "differential" => OperationMode.DifferentialBackup,
+                            "restore" => OperationMode.Restore,
+                            _ => throw new ArgumentException($"Invalid value for --mode: {value}. Valid values are full, diff, restore.")
+                        };
                         break;
 
                     case "maxfiles":
@@ -104,13 +110,13 @@ public static class ProgramOptionsParser
     private static void ShowHelp(IMessageReporter reporter)
     {
         reporter.Info("FlexGuard Backup Tool - Options:");
-        reporter.WriteRaw("  --jobname <name>             Name of the backup job.");
-        reporter.WriteRaw("  --mode <full|diff>           Backup mode (Full or Differential).");
-        reporter.WriteRaw("  --maxfiles <int>             Max files per group (default: 1000).");
-        reporter.WriteRaw("  --maxbytes <long>            Max bytes per group (default: 1GB).");
-        reporter.WriteRaw("  --compression <gzip|brotli|zstd> Compression method (default: gzip).");
-        reporter.WriteRaw("  --measure-compression        Enable compression ratio measurement.");
-        reporter.WriteRaw("  -v, --version                Show version.");
-        reporter.WriteRaw("  /?, /h, -h, --help           Show this help.");
+        reporter.WriteRaw("  --jobname <name>                  Name of the backup job.");
+        reporter.WriteRaw("  --mode <full|diff|restore>        Operation mode (Full, Differential, or Restore).");
+        reporter.WriteRaw("  --maxfiles <int>                  Max files per group (default: 1000).");
+        reporter.WriteRaw("  --maxbytes <long>                 Max bytes per group (default: 1GB).");
+        reporter.WriteRaw("  --compression <gzip|brotli|zstd>  Compression method (default: gzip).");
+        reporter.WriteRaw("  --measure-compression             Enable compression ratio measurement.");
+        reporter.WriteRaw("  -v, --version                     Show version.");
+        reporter.WriteRaw("  /?, /h, -h, --help                Show this help.");
     }
 }

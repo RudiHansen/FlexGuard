@@ -29,14 +29,14 @@ class Program
         }
         else
         {
-            //var options = new ProgramOptions("TestSmall", OperationMode.FullBackup);
-            //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
-            options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
-            //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
+            options = new ProgramOptions("TestSmall", OperationMode.FullBackup);
+            //options = new ProgramOptions("Test1", OperationMode.FullBackup);
+            //options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
+            //options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
             options.Compression = CompressionMethod.Zstd;
         }
 
-        reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
+        reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
 
         BackupJobConfig jobConfig = JobLoader.Load(options.JobName);
         var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);

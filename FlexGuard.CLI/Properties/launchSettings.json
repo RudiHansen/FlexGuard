@@ -1,0 +1,17 @@
+{
+  "profiles": {
+    "FlexGuard.CLI full": {
+      "commandName": "Project",
+      "commandLineArgs": "--jobname TestSmall --mode full --compression zstd"
+    },
+    "FlexGuard.CLI restore": {
+      "commandName": "Project",
+      "commandLineArgs": "--jobname TestSmall --mode restore --compression zstd"
+    },
+
+    "FlexGuard.CLI help": {
+      "commandName": "Project",
+      "commandLineArgs": "--help"
+    }
+  }
+}

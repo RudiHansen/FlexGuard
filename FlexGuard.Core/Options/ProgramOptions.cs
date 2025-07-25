@@ -10,7 +10,7 @@ public class ProgramOptions
     public int MaxFilesPerGroup { get; init; } = 1000;
     public long MaxBytesPerGroup { get; init; } = 1024 * 1024 * 1024; // 1 Gb
     public bool EnableCompressionRatioMeasurement { get; init; } = false;
-    public CompressionMethod Compression { get; set; } = CompressionMethod.GZip;
+    public CompressionMethod Compression { get; set; } = CompressionMethod.Zstd;
 
     public ProgramOptions(string jobName, OperationMode mode)
     {
@@ -27,7 +27,6 @@ public class ProgramOptions
         Compression = compression;
     }
 }
-
 public enum OperationMode
 {
     FullBackup,
