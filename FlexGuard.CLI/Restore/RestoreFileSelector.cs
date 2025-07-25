@@ -53,14 +53,7 @@ public class RestoreFileSelector
 
         // 3. Show file selector
         var allFiles = manifest.Files.Select(f => f.RelativePath).Distinct().OrderBy(p => p).ToList();
-        var selectedPaths = AnsiConsole.Prompt(
-            new MultiSelectionPrompt<string>()
-                .Title("Select [green]files to restore[/]")
-                .NotRequired()
-                .PageSize(15)
-                .MoreChoicesText("[grey](Move up/down to reveal more files)[/]")
-                .InstructionsText("[grey](Press [blue]<space>[/] to toggle a file, [green]<enter>[/] to accept)[/]")
-                .AddChoices(allFiles));
+        var selectedPaths = DirectoryViewSelector.Show(allFiles);
 
         // 4. Match back to full manifest entries, including compression method
         var selections = manifest.Files
