@@ -157,6 +157,8 @@ KNOWN GAPS / OPEN ITEMS
 - No VSS integration for locked files (Windows) yet.
 - No end-to-end resumable backup for partially interrupted runs (metadata exists: TimestampStart/End).
 - Limited unit/integration test coverage (expand planned).
+- JSON serialization warnings: The current use of System.Text.Json may cause trimming warnings during Release builds.
+  This will be addressed in v0.4 by introducing JsonSerializerContext to ensure compatibility with PublishTrimmed builds.
 
 CHANGE HISTORY
 v0.1 (Initial Prototype)

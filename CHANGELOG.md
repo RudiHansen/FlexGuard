@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Planned v0.4 / Next]
+- Diff-based storage for file versioning (avoid full re-duplication).
+- Hash per chunk file and optional manifest signing.
+- Transaction-safe manifest writes (atomic/temporary file then swap).
+- Expanded test coverage (unit + integration).
+- **Fix System.Text.Json trimming warnings** by introducing `JsonSerializerContext` (source generators) or selectively disabling trimming for affected code paths to ensure `PublishTrimmed=true` works safely.
+
+---
+
 ## [v0.3-beta] - Current
 ### Added
 - Implemented CLI argument parsing (ProgramOptionsParser) with /?, /h, -h, --help.
