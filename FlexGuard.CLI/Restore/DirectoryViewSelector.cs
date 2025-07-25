@@ -43,6 +43,7 @@ public static class DirectoryViewSelector
             {
                 selectedItems.Clear();
                 AnsiConsole.MarkupLine("[grey]All selections cleared.[/]");
+                PrintSelectionFooter(selectedItems, currentView, root, currentFilter);
                 continue;
             }
 
@@ -66,6 +67,7 @@ public static class DirectoryViewSelector
                 }
 
                 AnsiConsole.MarkupLine("[grey]All items selected.[/]");
+                PrintSelectionFooter(selectedItems, currentView, root, currentFilter);
                 continue;
             }
 
@@ -100,6 +102,7 @@ public static class DirectoryViewSelector
                     AnsiConsole.MarkupLine("[red]No items match the current filter.[/]");
                     currentFilter = ""; // Reset automatically
                 }
+                PrintSelectionFooter(selectedItems, currentView, root, currentFilter);
                 continue;
             }
 
@@ -116,15 +119,8 @@ public static class DirectoryViewSelector
                 .Where(i => string.IsNullOrEmpty(currentFilter) || i.Contains(currentFilter, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            // Calculate selection stats
-            int totalDirs = items.Count(i => i.EndsWith(Path.DirectorySeparatorChar));
-            int totalFiles = items.Count - totalDirs;
-            int selectedDirs = selectedItems.Count(i => i.EndsWith(Path.DirectorySeparatorChar));
-            int selectedFiles = selectedItems.Count - selectedDirs;
-
-            // Display selection status
-            AnsiConsole.MarkupLine(
-                $"[grey]Selected:[/] [yellow]{selectedDirs} directories[/], [yellow]{selectedFiles} files[/] [grey](of {totalDirs} dirs, {totalFiles} files)[/]");
+            // Display selection footer
+            PrintSelectionFooter(selectedItems, currentView, root, currentFilter);
 
             // Display multi-selection prompt
             var prompt = new MultiSelectionPrompt<string>()
@@ -142,6 +138,9 @@ public static class DirectoryViewSelector
 
             // Synchronize selections
             SyncSelections(selectedItems, choice, items, root);
+
+            // Update footer after selection
+            PrintSelectionFooter(selectedItems, currentView, root, currentFilter);
         }
 
         // Expand final selection of directories into files
@@ -160,6 +159,8 @@ public static class DirectoryViewSelector
 
         return finalSelection.OrderBy(x => x).ToList();
     }
+
+
 
     // ----------------- Helper Methods -------------------
 
@@ -363,5 +364,53 @@ public static class DirectoryViewSelector
             string subPath = Path.Combine(basePath, subDir.Name);
             AddAllDirsAndFilesRecursive(subDir, subPath, result);
         }
+    }
+    private static void PrintSelectionStatus(HashSet<string> selectedItems, ViewMode currentView, DirNode root, string currentFilter)
+    {
+        var items = (currentView == ViewMode.Directory
+            ? GetDirectoriesOnly(root)
+            : GetDirectoriesAndFiles(root))
+            .Where(i => string.IsNullOrEmpty(currentFilter) || i.Contains(currentFilter, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        int totalDirs = items.Count(i => i.EndsWith(Path.DirectorySeparatorChar));
+        int totalFiles = items.Count - totalDirs;
+        int selectedDirs = selectedItems.Count(i => i.EndsWith(Path.DirectorySeparatorChar));
+        int selectedFiles = selectedItems.Count - selectedDirs;
+
+        AnsiConsole.MarkupLine(
+            $"[grey]Selected:[/] [yellow]{selectedDirs} directories[/], [yellow]{selectedFiles} files[/] [grey](of {totalDirs} dirs, {totalFiles} files)[/]");
+    }
+    private static void PrintSelectionFooter(HashSet<string> selectedItems, ViewMode currentView, DirNode root, string currentFilter)
+    {
+        var allItems = (currentView == ViewMode.Directory
+            ? GetDirectoriesOnly(root)
+            : GetDirectoriesAndFiles(root))
+            .Where(i => string.IsNullOrEmpty(currentFilter) || i.Contains(currentFilter, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        // Correct calculation of total directories and files
+        int totalDirs = allItems.Count(i => i.EndsWith(Path.DirectorySeparatorChar));
+        int totalFiles = allItems.Count(i => !i.EndsWith(Path.DirectorySeparatorChar));
+
+        // Selected counts
+        int selectedDirs = selectedItems.Count(i => i.EndsWith(Path.DirectorySeparatorChar));
+        int selectedFiles = selectedItems.Count(i => !i.EndsWith(Path.DirectorySeparatorChar));
+
+        // Save current cursor position
+        var (left, top) = Console.GetCursorPosition();
+
+        // Move cursor to bottom line
+        int bottom = Console.WindowTop + Console.WindowHeight - 1;
+        Console.SetCursorPosition(0, bottom);
+
+        // Clear line and write footer
+        Console.Write(new string(' ', Console.WindowWidth));
+        Console.SetCursorPosition(0, bottom);
+        AnsiConsole.Markup(
+            $"[grey]Selected:[/] [yellow]{selectedDirs} directories[/], [yellow]{selectedFiles} files[/] [grey](of {totalDirs} dirs, {totalFiles} files)[/]");
+
+        // Restore cursor position
+        Console.SetCursorPosition(left, top);
     }
 }

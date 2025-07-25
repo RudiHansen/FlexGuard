@@ -49,7 +49,6 @@ class Program
             var selector = new RestoreFileSelector(registryManager.GetRegistry(), localJobsFolder);
             var selectedFiles = selector.SelectFiles();
 
-            return;
             foreach (var file in selectedFiles)
             {
                 var chunkPath = Path.Combine(
