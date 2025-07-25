@@ -28,18 +28,37 @@ public static class DirectoryViewSelector
             var menuChoice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("[green]Select view mode or finish[/]:")
-                    .AddChoices(
-                        currentView == ViewMode.Directory ? "▶ Directory View (current)" : "Directory View",
-                        currentView == ViewMode.Tree ? "▶ Tree View (current)" : "Tree View",
-                        "Finish and Restore"));
+                    .AddChoices(new[]
+                    {
+                    "Directory View",
+                    "Tree View",
+                    "Finish and Restore"
+                    })
+                    .UseConverter(choice =>
+                    {
+                        return choice switch
+                        {
+                            "Directory View" => currentView == ViewMode.Directory ? "▶ Directory View (current)" : "Directory View",
+                            "Tree View" => currentView == ViewMode.Tree ? "▶ Tree View (current)" : "Tree View",
+                            _ => "Finish and Restore"
+                    };
+            }));
 
-            if (menuChoice.StartsWith("Finish"))
-                break; // Done, exit loop
+            if (menuChoice == "Finish and Restore")
+                break;
 
-            // Determine selected view
-            currentView = menuChoice.StartsWith("Directory") ? ViewMode.Directory : ViewMode.Tree;
+            currentView = menuChoice == "Directory View" ? ViewMode.Directory : ViewMode.Tree;
 
-            // Build a list of choices for this view
+
+            var newView = menuChoice.StartsWith("Directory") ? ViewMode.Directory : ViewMode.Tree;
+
+            // If switching to Tree View, ensure files under selected directories are included
+            if (newView == ViewMode.Tree)
+                ExpandSelectedDirectories(selectedItems, root);
+
+            currentView = newView;
+
+            // Build a list of choices for the current view
             var items = currentView == ViewMode.Directory
                 ? GetDirectoriesOnly(root)
                 : GetDirectoriesAndFiles(root);
@@ -59,13 +78,11 @@ public static class DirectoryViewSelector
 
             var choice = AnsiConsole.Prompt(prompt);
 
-            // Update selected items
-            selectedItems.RemoveWhere(x => items.Contains(x)); // Clear old selections from this view
-            foreach (var c in choice)
-                selectedItems.Add(c);
+            // Synchronize selectedItems based on current view
+            SyncSelections(selectedItems, choice, items, root);
         }
 
-        // Expand all selected directories to individual files
+        // Final expansion of selected directories to individual files
         var finalSelection = new HashSet<string>();
         foreach (var item in selectedItems)
         {
@@ -151,6 +168,39 @@ public static class DirectoryViewSelector
         return list;
     }
 
+    private static void SyncSelections(HashSet<string> selectedItems, List<string> choice, List<string> items, DirNode root)
+    {
+        // Fjern fravalgte elementer
+        foreach (var item in items)
+        {
+            if (!choice.Contains(item) && selectedItems.Contains(item))
+            {
+                if (item.EndsWith(Path.DirectorySeparatorChar))
+                    RemoveAllFilesUnderFolder(root, item.TrimEnd(Path.DirectorySeparatorChar), selectedItems);
+                selectedItems.Remove(item);
+            }
+        }
+
+        // Tilføj nyvalgte elementer
+        foreach (var item in choice)
+        {
+            if (!selectedItems.Contains(item))
+            {
+                selectedItems.Add(item);
+                if (item.EndsWith(Path.DirectorySeparatorChar))
+                    AddAllFilesUnderFolder(root, item.TrimEnd(Path.DirectorySeparatorChar), selectedItems);
+            }
+        }
+    }
+
+    private static void ExpandSelectedDirectories(HashSet<string> selectedItems, DirNode root)
+    {
+        foreach (var dir in selectedItems.Where(i => i.EndsWith(Path.DirectorySeparatorChar)).ToList())
+        {
+            AddAllFilesUnderFolder(root, dir.TrimEnd(Path.DirectorySeparatorChar), selectedItems);
+        }
+    }
+
     private static void AddAllFilesUnderFolder(DirNode node, string folder, HashSet<string> result, string currentPath = "")
     {
         string currentFullPath = string.IsNullOrEmpty(currentPath)
@@ -176,5 +226,26 @@ public static class DirectoryViewSelector
 
         foreach (var subDir in node.Directories)
             AddAllFilesRecursive(subDir, result);
+    }
+
+    private static void RemoveAllFilesUnderFolder(DirNode node, string folder, HashSet<string> selected, string currentPath = "")
+    {
+        string currentFullPath = string.IsNullOrEmpty(currentPath)
+            ? node.Name
+            : Path.Combine(currentPath, node.Name);
+
+        if (currentFullPath == folder)
+        {
+            foreach (var file in node.Files)
+                selected.Remove(file);
+            foreach (var subDir in node.Directories)
+                RemoveAllFilesUnderFolder(subDir, folder, selected, currentFullPath);
+            return;
+        }
+
+        foreach (var subDir in node.Directories)
+        {
+            RemoveAllFilesUnderFolder(subDir, folder, selected, currentFullPath);
+        }
     }
 }

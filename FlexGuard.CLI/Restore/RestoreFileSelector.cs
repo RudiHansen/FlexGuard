@@ -66,6 +66,7 @@ public class RestoreFileSelector
                 manifest.Compression))  // Include compression method
             .ToList();
 
+        
         return selections;
     }
 }
