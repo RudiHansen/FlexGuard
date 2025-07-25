@@ -1,6 +1,7 @@
 using FlexGuard.CLI.Reporting;
 using FlexGuard.CLI.Restore;
 using FlexGuard.Core.Backup;
+using FlexGuard.Core.Compression;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Registry;
@@ -16,11 +17,12 @@ class Program
         reporter.Info("Starting FlexGuard backup...");
         var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var options = new ProgramOptions("TestSmall", OperationMode.FullBackup);
+        //var options = new ProgramOptions("TestSmall", OperationMode.FullBackup);
         //var options = new ProgramOptions("Test1", OperationMode.FullBackup);
-        //var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
+        var options = new ProgramOptions("TestLarge", OperationMode.FullBackup);
         //var options = new ProgramOptions("TestExLarge", OperationMode.FullBackup);
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}");
+        options.Compression = CompressionMethod.Zstd;
 
         BackupJobConfig jobConfig = JobLoader.Load(options.JobName);
         var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
