@@ -59,7 +59,7 @@ public static class DirectoryViewSelector
                 {
                     selectedItems.Add(item);
                     if (item.EndsWith(Path.DirectorySeparatorChar))
-                        AddAllFilesUnderFolder(root, item.TrimEnd(Path.DirectorySeparatorChar), selectedItems);
+                        RemoveAllDirectoriesAndFilesUnderFolder(root, item, selectedItems);
                 }
 
                 AnsiConsole.MarkupLine("[grey]All items selected.[/]");
@@ -335,27 +335,34 @@ public static class DirectoryViewSelector
         foreach (var file in node.Files)
             result.Add(file);
     }
-    private static void RemoveAllDirectoriesAndFilesUnderFolder(DirNode node, string folder, HashSet<string> selected, string currentPath = "")
+    private static void RemoveAllDirectoriesAndFilesUnderFolder(DirNode node, string folder, HashSet<string> selected)
     {
-        string currentFullPath = string.IsNullOrEmpty(currentPath)
-            ? node.Name
-            : Path.Combine(currentPath, node.Name);
+        // Sørg for at folder ender med '\'
+        if (!folder.EndsWith(Path.DirectorySeparatorChar))
+            folder += Path.DirectorySeparatorChar;
 
-        if (currentFullPath == folder)
-        {
-            selected.Remove(currentFullPath + Path.DirectorySeparatorChar);
+        // Fjern alle elementer, der starter med folder
+        var toRemove = selected.Where(x =>
+            x.StartsWith(folder, StringComparison.OrdinalIgnoreCase)).ToList();
 
-            foreach (var file in node.Files)
-                selected.Remove(file);
+        foreach (var item in toRemove)
+            selected.Remove(item);
+    }
 
-            foreach (var subDir in node.Directories)
-                RemoveAllDirectoriesAndFilesUnderFolder(subDir, folder, selected, currentFullPath);
-            return;
-        }
+    private static void RemoveDirectoryRecursive(DirNode node, string basePath, HashSet<string> selected)
+    {
+        // Fjern denne mappe
+        selected.Remove(basePath + Path.DirectorySeparatorChar);
 
+        // Fjern alle filer i denne mappe
+        foreach (var file in node.Files)
+            selected.Remove(file);
+
+        // Fjern alle undermapper
         foreach (var subDir in node.Directories)
         {
-            RemoveAllDirectoriesAndFilesUnderFolder(subDir, folder, selected, currentFullPath);
+            string subPath = Path.Combine(basePath, subDir.Name);
+            RemoveDirectoryRecursive(subDir, subPath, selected);
         }
     }
 }
