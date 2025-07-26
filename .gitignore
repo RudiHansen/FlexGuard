@@ -372,3 +372,6 @@ FodyWeavers.xsd
 /FlexGuard.CLI/Jobs/job_TestExLarge.json
 /FlexGuard.CLI/Jobs/job_TestLarge.json
 /FlexGuard.CLI/Jobs/job_TestSmall.json
+/FlexGuard.CLI/Jobs/job_RSH-PC2.json
+/FlexGuard.CLI/Jobs/job_Test1 - Copy.json
+/FlexGuard.CLI/Jobs/job_Test2.json
