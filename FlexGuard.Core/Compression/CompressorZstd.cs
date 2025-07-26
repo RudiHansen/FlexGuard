@@ -8,14 +8,8 @@ namespace FlexGuard.Core.Compression
 
         public void Compress(Stream input, Stream output)
         {
-            using var compressor = new Compressor(level: 3); // 1=fast, 22=best compression
-            using var ms = new MemoryStream();
-            input.CopyTo(ms);
-
-            byte[] inputBytes = ms.ToArray();
-            byte[] compressed = compressor.Wrap(inputBytes).ToArray(); // Konverter Span<byte> til byte[]
-
-            output.Write(compressed, 0, compressed.Length);
+            using var zstdStream = new ZstdSharp.CompressionStream(output);
+            input.CopyTo(zstdStream);
         }
 
         public void Decompress(Stream input, Stream output)

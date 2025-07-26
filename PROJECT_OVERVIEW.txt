@@ -187,12 +187,19 @@ v0.3 (Beta)
 - Verified restore logic with per-file hash validation.
 - Significant performance boost due to Zstd compression (over 60% faster than GZip).
 
+PLANNED v0.4 / DONE
+- Fix error when lastBackupTime was hardcoded, now it takes the latest backup time from the manifest
+- Investigate and fix 'Stream was too long' error in ChunkProcessor (add file-splitting or chunk-size limit).
+  The problem occurs in CompressorZstd when compressing large files, so i fixed it, by changing the code.
+
 PLANNED v0.4 / NEXT
-- Hash per chunk file and optional manifest signing.
+- Improve exclude pattern matching to ensure recursive and case-insensitive filtering for directories like 'obj' and '.vs'.
+- Investigate compression in ChunkProcessor.Process, its possible we are double-compressing files (Todoist Task)
+- Hash per chunk file and optional manifest signing
+- Remote/cloud targets SCP/SSH
 
 
 TODO / FUTURE WORK
-- Remote/cloud targets SCP/SSH
 - Test suite expansion: unit tests for parsers/selectors, integration tests for end-to-end backup/restore.
 - VSS (Windows) integration for locked/open files.
 - Snapshot/transactional consistency for manifests.
@@ -200,3 +207,9 @@ TODO / FUTURE WORK
 - Encryption-at-rest option for manifests and chunks.
 - Retention policies and automatic pruning (N full backups, prune old diffs).
 - Smarter restore: optionally rehydrate only new/changed files from diffs automatically.
+- Cross-platform support (Linux)
+- Prebuilt binaries / Release automation (CI/CD)
+- Backup job validation
+- Automated integrity check tool
+- Validate and normalize absolute paths in job config to avoid relative resolution errors
+- Recheck --maxbytes parameter, it is really in bytes, that might be a bad idea.
