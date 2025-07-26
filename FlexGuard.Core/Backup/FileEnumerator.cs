@@ -74,6 +74,11 @@ public static class FileEnumerator
         {
             var normalizedPattern = pattern.Replace('\\', '/').TrimEnd('/');
 
+            // Match *.tmp, *.log osv.
+            if (System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(normalizedPattern, Path.GetFileName(relativePath), ignoreCase: true))
+                return true;
+
+            // Match eksakte mappe-/filstier
             if (relativePath.Equals(normalizedPattern, StringComparison.OrdinalIgnoreCase) ||
                 relativePath.StartsWith(normalizedPattern + "/", StringComparison.OrdinalIgnoreCase))
             {

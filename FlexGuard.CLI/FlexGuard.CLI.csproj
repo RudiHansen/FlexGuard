@@ -22,6 +22,9 @@
     <None Update="Jobs\job_default.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Jobs\job_RSH-PC2.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Jobs\job_Test2.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
