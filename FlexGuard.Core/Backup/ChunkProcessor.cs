@@ -21,13 +21,7 @@ public static class ChunkProcessor
         reporter.Info($"Processing chunk {group.Index} with {group.Files.Count} files ({group.GroupType})...");
 
         // Determine ZIP compression level based on group type (internal to the ZIP)
-        var zipCompressionLevel = group.GroupType switch
-        {
-            FileGroupType.LargeNonCompressible or FileGroupType.HugeNonCompressible or FileGroupType.SmallNonCompressible =>
-                CompressionLevel.NoCompression,
-            _ =>
-                CompressionLevel.Optimal
-        };
+        var zipCompressionLevel = CompressionLevel.NoCompression;
 
         // Select outer compressor based on the manifest (GZip, Brotli, Zstd)
         var compressor = CompressorFactory.Create(manifestBuilder.Compression);
@@ -65,7 +59,7 @@ public static class ChunkProcessor
                             ChunkFile = chunkFileName,
                             FileSize = file.FileSize,
                             LastWriteTimeUtc = file.LastWriteTimeUtc,
-                            CompressionSkipped = zipCompressionLevel == CompressionLevel.NoCompression,
+                            CompressionSkipped = (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible),
                             CompressionRatio = 0
                         });
                     }
@@ -76,10 +70,17 @@ public static class ChunkProcessor
                 }
             }
 
-            // Step 2: Compress the ZIP file with the selected outer compressor
-            using var zipInput = new FileStream(tempZipPath, FileMode.Open, FileAccess.Read);
-            using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-            compressor.Compress(zipInput, outStream);
+            // Step 2: Apply outer compression (GZip, Brotli, or Zstd) unless group is marked as non-compressible
+            if (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible)
+            {
+                File.Copy(tempZipPath, outputPath, overwrite: true);
+            }
+            else
+            {
+                using var zipInput = new FileStream(tempZipPath, FileMode.Open, FileAccess.Read);
+                using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+                compressor.Compress(zipInput, outStream);
+            }
 
             reporter.Info($"Chunk {group.Index} written to '{outputPath}' using {compressor.Name}");
         }

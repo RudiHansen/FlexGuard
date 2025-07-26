@@ -11,11 +11,8 @@ public class PendingFileEntry
 
 public enum FileGroupType
 {
-    SmallCompressible,
-    SmallNonCompressible,
-    LargeCompressible,
-    LargeNonCompressible,
+    Compressible,
+    NonCompressible,
     HugeCompressible,
-    HugeNonCompressible, 
-    Default
+    HugeNonCompressible
 }

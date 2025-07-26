@@ -191,10 +191,10 @@ PLANNED v0.4 / DONE
 - Fix error when lastBackupTime was hardcoded, now it takes the latest backup time from the manifest
 - Investigate and fix 'Stream was too long' error in ChunkProcessor (add file-splitting or chunk-size limit).
   The problem occurs in CompressorZstd when compressing large files, so i fixed it, by changing the code.
+- Improve exclude pattern matching to ensure recursive and case-insensitive filtering for directories like 'obj' and '.vs'.
+- Ensure ChunkProcessor avoids double-compression by skipping inner ZIP compression and conditionally applying outer compression based on file group type (Todoist Task)
 
 PLANNED v0.4 / NEXT
-- Improve exclude pattern matching to ensure recursive and case-insensitive filtering for directories like 'obj' and '.vs'.
-- Investigate compression in ChunkProcessor.Process, its possible we are double-compressing files (Todoist Task)
 - Hash per chunk file and optional manifest signing
 - Remote/cloud targets SCP/SSH
 

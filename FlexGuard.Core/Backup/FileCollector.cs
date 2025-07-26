@@ -53,34 +53,23 @@ public static class FileCollector
 
     private static FileGroupType DetermineGroupType(string path, long size)
     {
-        var extension = Path.GetExtension(path).ToLowerInvariant();
-
-        // Step 0: Extremely small files are not worth compressing
-        if (size <= 100)
-            return FileGroupType.SmallNonCompressible;
+        const long HugeFileThreshold = 1_000_000_000;
+        var extension = Path.GetExtension(path)?.ToLowerInvariant() ?? "";
 
         // Step 1: Check if the file extension is typically already compressed
         if (IsNonCompressibleExtension(extension))
         {
-            if (size > 1_000_000_000)
+            if (size > HugeFileThreshold)
                 return FileGroupType.HugeNonCompressible;
-            if (size > 100_000_000)
-                return FileGroupType.LargeNonCompressible;
-            return FileGroupType.SmallNonCompressible;
+            return FileGroupType.NonCompressible;
         }
 
         // Step 2: Otherwise, classify based on size
-        if (size > 1_000_000_000)
+        if (size > HugeFileThreshold)
             return FileGroupType.HugeCompressible;
 
-        if (size > 100_000_000)
-            return FileGroupType.LargeCompressible;
-
-        if (size < 100_000)
-            return FileGroupType.SmallCompressible;
-
         // Step 3: Default fallback for mid-sized files
-        return FileGroupType.Default;
+        return FileGroupType.Compressible;
     }
 
     private static readonly HashSet<string> NonCompressibleExtensions = new(StringComparer.OrdinalIgnoreCase)
