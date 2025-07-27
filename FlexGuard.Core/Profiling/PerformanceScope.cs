@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 
 namespace FlexGuard.Core.Profiling
@@ -9,6 +8,7 @@ namespace FlexGuard.Core.Profiling
         private readonly PerformanceTracker _tracker;
         private readonly Stopwatch _stopwatch;
         private readonly long _memoryBefore;
+        private readonly Dictionary<string, object> _context = new();
 
         public PerformanceScope(string name, PerformanceTracker tracker)
         {
@@ -18,11 +18,24 @@ namespace FlexGuard.Core.Profiling
             _stopwatch = Stopwatch.StartNew();
         }
 
+        public void Set(string key, object value)
+        {
+            _context[key] = value;
+        }
+
+        public void Accumulate(string key, long value)
+        {
+            if (_context.TryGetValue(key, out var existing) && existing is long current)
+                _context[key] = current + value;
+            else
+                _context[key] = value;
+        }
+
         public void Dispose()
         {
             _stopwatch.Stop();
             long memoryAfter = GC.GetTotalMemory(false);
-            _tracker.RecordSection(_name, _stopwatch.Elapsed, _memoryBefore, memoryAfter);
+            _tracker.RecordSection(_name, _stopwatch.Elapsed, _memoryBefore, memoryAfter, _context);
             GC.SuppressFinalize(this);
         }
     }

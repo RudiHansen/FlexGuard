@@ -16,10 +16,9 @@ class Program
     static void Main(string[] args)
     {
         // Start global performance tracking
-        var tracker = new PerformanceTracker();
-        tracker.StartGlobal();
+        PerformanceTracker.Instance.StartGlobal();
 
-        using (tracker.TrackSection("Main"))
+        using (var scope = PerformanceTracker.Instance.TrackSection("Main"))
         {
             var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
             reporter.Info("Starting FlexGuard backup...");
@@ -88,18 +87,18 @@ class Program
             var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
             registryManager.Save();
 
-            List<FlexGuard.Core.Manifest.PendingFileEntry> allFiles = new();
-            using (tracker.TrackSection("FileCollector.CollectFiles"))
-            {
-                allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
-                FileListReporter.ReportSummary(allFiles, reporter);
-                reporter.Info($"Found {allFiles.Count} files to back up.");
-            }
+            var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
+            FileListReporter.ReportSummary(allFiles, reporter);
+            reporter.Info($"Found {allFiles.Count} files to back up.");
 
+            scope.Set("totalFiles", allFiles.Count);
+            scope.Set("totalBytes", allFiles.Sum(f => f.FileSize));
 
             reporter.Info("Grouping files into groups...");
             var fileGroups = FileGrouper.GroupFiles(allFiles, options.MaxFilesPerGroup, options.MaxBytesPerGroup, reporter);
             reporter.Info($"Created {fileGroups.Count} file groups.");
+
+            scope.Set("groupCount", fileGroups.Count);
 
             var manifestBuilder = new BackupManifestBuilder(options.JobName, options.Mode, backupEntry.TimestampStart, options.Compression);
 
@@ -123,10 +122,8 @@ class Program
             File.Copy(Path.Combine(localJobsFolder, $"registry_{options.JobName}.json"), Path.Combine(backupFolderPath, $"registry_{options.JobName}.json"), overwrite: true);
             reporter.Success("Backup process completed successfully.");
         }
-        tracker.EndGlobal();
+        PerformanceTracker.Instance.EndGlobal();
 
         NotificationHelper.PlayBackupCompleteSound();
-
     }
-
 }

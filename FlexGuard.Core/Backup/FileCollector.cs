@@ -1,5 +1,6 @@
 ﻿using FlexGuard.Core.Config;
 using FlexGuard.Core.Manifest;
+using FlexGuard.Core.Profiling;
 using FlexGuard.Core.Reporting;
 
 namespace FlexGuard.Core.Backup;
@@ -12,39 +13,41 @@ public static class FileCollector
     DateTime? lastBackupTime = null)
     {
         var entries = new List<PendingFileEntry>();
-
-        foreach (var source in config.Sources)
+        using (var scope = PerformanceTracker.Instance.TrackSection("Collect Files"))
         {
-            var files = FileEnumerator.GetFiles(source.Path, source.Exclude, reporter);
-
-            foreach (var file in files)
+            foreach (var source in config.Sources)
             {
-                try
-                {
-                    var info = new FileInfo(file);
+                var files = FileEnumerator.GetFiles(source.Path, source.Exclude, reporter);
 
-                    if (lastBackupTime == null || info.LastWriteTimeUtc > lastBackupTime.Value)
+                foreach (var file in files)
+                {
+                    try
                     {
-                        var fullPath = Path.GetFullPath(file);
-                        var drive = Path.GetPathRoot(fullPath)?.TrimEnd('\\', '/').Replace(":", "") ?? "UNKNOWN";
-                        var relativeToRoot = Path.GetRelativePath(Path.GetPathRoot(fullPath) ?? "", fullPath);
-                        var relativePath = Path.Combine(drive, relativeToRoot).Replace('\\', '/');
+                        var info = new FileInfo(file);
 
-                        var groupType = DetermineGroupType(file, info.Length);
-
-                        entries.Add(new PendingFileEntry
+                        if (lastBackupTime == null || info.LastWriteTimeUtc > lastBackupTime.Value)
                         {
-                            SourcePath = fullPath,
-                            RelativePath = relativePath,
-                            FileSize = info.Length,
-                            LastWriteTimeUtc = info.LastWriteTimeUtc,
-                            GroupType = groupType
-                        });
+                            var fullPath = Path.GetFullPath(file);
+                            var drive = Path.GetPathRoot(fullPath)?.TrimEnd('\\', '/').Replace(":", "") ?? "UNKNOWN";
+                            var relativeToRoot = Path.GetRelativePath(Path.GetPathRoot(fullPath) ?? "", fullPath);
+                            var relativePath = Path.Combine(drive, relativeToRoot).Replace('\\', '/');
+
+                            var groupType = DetermineGroupType(file, info.Length);
+
+                            entries.Add(new PendingFileEntry
+                            {
+                                SourcePath = fullPath,
+                                RelativePath = relativePath,
+                                FileSize = info.Length,
+                                LastWriteTimeUtc = info.LastWriteTimeUtc,
+                                GroupType = groupType
+                            });
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    reporter.Warning($"Could not access file: {file} - {ex.Message}");
+                    catch (Exception ex)
+                    {
+                        reporter.Warning($"Could not access file: {file} - {ex.Message}");
+                    }
                 }
             }
         }
