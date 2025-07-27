@@ -23,7 +23,6 @@ tailored for both personal and professional use, with a focus on:
 
 KEY FEATURES
 - Full backup (monthly) and daily differential backup with file-level change detection.
-- Extra option for --mode auto, which automatically selects the best backup mode based on the last backup time.
 - Only a single copy of each file is stored; future versions will store changes as diffs.
 - Multiple backup destinations supported: NAS, OneDrive, USB disk (SCP/SSH planned).
 - Configuration driven by job_default.json template (user can copy and customize for each job).
@@ -195,6 +194,15 @@ PLANNED v0.4 / DONE
 - Improve exclude pattern matching to ensure recursive and case-insensitive filtering for directories like 'obj' and '.vs'.
 - Ensure ChunkProcessor avoids double-compression by skipping inner ZIP compression and conditionally applying outer compression based on file group type (Todoist Task)
   Also seems like this gave a performance boost (39.6% in one test), as it avoids unnecessary compression steps.
+- Performance measurement tools, measure I/O, Memory usage, CPU usage, compression, etc.
+  Implemented a unified profiling system via PerformanceTracker, PerformanceScope, and PerformanceReport to measure wall time, CPU time, memory usage, and compression ratios. Output is written as structured JSON logs.
+    - Current features:
+	- Global and per-process timing via TrackSection
+	- CPU and memory tracking
+	- Logging of chunk compression ratios
+	- JSON output saved during execution for post-analysis
+	- Support for context data (e.g., group stats, file counts)
+
 
 PLANNED v0.4 / NEXT
 - Hash per chunk file and optional manifest signing
@@ -202,7 +210,7 @@ PLANNED v0.4 / NEXT
 
 
 TODO / FUTURE WORK
-- Performance measurement tools, measure I/O, Memory usage, CPU usage, compression, etc.
+- Extra option for --mode auto, which automatically selects the best backup mode based on the last backup time.
 - Cleanup CLI/Program.cs, its a mess right now.
 - CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
 - Compression analyzer, option to run a compression analysis of files to determine the best compression strategy.
@@ -219,3 +227,6 @@ TODO / FUTURE WORK
 - Automated integrity check tool
 - Validate and normalize absolute paths in job config to avoid relative resolution errors
 - Recheck --maxbytes parameter, it is really in bytes, that might be a bad idea.
+- PerformanceTracker: Consider switching to proper .jsonl or .json array format if automated analysis tools are added
+- PerformanceTracker: Potentially add I/O tracking if deeper disk performance insights are needed
+- PerformanceTracker: Build analyzer or visualization tool to consume and display profiling output

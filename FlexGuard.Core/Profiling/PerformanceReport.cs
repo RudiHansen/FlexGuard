@@ -23,7 +23,6 @@ namespace FlexGuard.Core.Profiling
         public string ChunkName { get; set; } = string.Empty;
         public long OriginalSize { get; set; }
         public long CompressedSize { get; set; }
-
         public double CompressionRatio => OriginalSize == 0 ? 0 : (1 - (double)CompressedSize / OriginalSize) * 100;
     }
 }

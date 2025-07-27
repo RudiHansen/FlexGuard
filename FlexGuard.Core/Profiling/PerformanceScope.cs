@@ -55,9 +55,7 @@ namespace FlexGuard.Core.Profiling
             }
             catch { }
 
-            var cpuPercent = wallTime.TotalMilliseconds > 0
-                ? cpuTime.TotalMilliseconds / wallTime.TotalMilliseconds * 100.0
-                : 0;
+            var cpuPercent = (cpuTime.TotalMilliseconds / (wallTime.TotalMilliseconds * Environment.ProcessorCount)) * 100;
 
             var sectionEntry = new Dictionary<string, object?>
             {
