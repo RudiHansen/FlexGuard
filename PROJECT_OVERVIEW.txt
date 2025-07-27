@@ -23,6 +23,7 @@ tailored for both personal and professional use, with a focus on:
 
 KEY FEATURES
 - Full backup (monthly) and daily differential backup with file-level change detection.
+- Extra option for --mode auto, which automatically selects the best backup mode based on the last backup time.
 - Only a single copy of each file is stored; future versions will store changes as diffs.
 - Multiple backup destinations supported: NAS, OneDrive, USB disk (SCP/SSH planned).
 - Configuration driven by job_default.json template (user can copy and customize for each job).

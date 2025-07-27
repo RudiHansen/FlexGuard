@@ -1,8 +1,4 @@
-// PerformanceTracker.cs
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -26,9 +22,7 @@ namespace FlexGuard.Core.Profiling
             string path = Path.Combine("Logs", $"{DateTime.Now:yyyy-MM-dd_HHmmss}.performance.jsonl");
             _writer = new StreamWriter(path);
         }
-
         public void StartGlobal() { }
-
         public void EndGlobal()
         {
             var proc = Process.GetCurrentProcess();
@@ -44,7 +38,6 @@ namespace FlexGuard.Core.Profiling
             Log(summary);
             _writer.Dispose();
         }
-
         public PerformanceScope TrackSection(string name) => new(name);
 
         public void Log(object data)

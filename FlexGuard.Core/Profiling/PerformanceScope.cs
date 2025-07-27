@@ -1,6 +1,3 @@
-// PerformanceScope.cs
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace FlexGuard.Core.Profiling
@@ -32,6 +29,17 @@ namespace FlexGuard.Core.Profiling
                 _context[key] = currentLong + value;
             else
                 _context[key] = value;
+        }
+        public void AddListItem(string key, object item)
+        {
+            if (_context.TryGetValue(key, out var existing) && existing is List<object> list)
+            {
+                list.Add(item);
+            }
+            else
+            {
+                _context[key] = new List<object> { item };
+            }
         }
 
         public void Dispose()

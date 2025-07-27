@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace FlexGuard.Core.Profiling
 {
     public class PerformanceReport

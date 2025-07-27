@@ -1,5 +1,7 @@
 ﻿using FlexGuard.Core.Manifest;
+using FlexGuard.Core.Profiling;
 using FlexGuard.Core.Reporting;
+using System.Xml.Schema;
 
 namespace FlexGuard.Core.Backup;
 
@@ -16,18 +18,37 @@ public static class FileGrouper
 
         // Group files by GroupType
         var groupedByType = files.GroupBy(f => f.GroupType);
-
-        foreach (var typeGroup in groupedByType)
+        using (var scope = PerformanceTracker.Instance.TrackSection("Group Files"))
         {
-            var currentFiles = new List<PendingFileEntry>();
-            long currentSize = 0;
-
-            foreach (var file in typeGroup)
+            foreach (var typeGroup in groupedByType)
             {
-                bool exceedsFileLimit = currentFiles.Count >= maxFilesPerGroup;
-                bool exceedsSizeLimit = currentSize + file.FileSize > maxBytesPerGroup;
+                var currentFiles = new List<PendingFileEntry>();
+                long currentSize = 0;
 
-                if ((exceedsFileLimit || exceedsSizeLimit) && currentFiles.Count > 0)
+                foreach (var file in typeGroup)
+                {
+                    bool exceedsFileLimit = currentFiles.Count >= maxFilesPerGroup;
+                    bool exceedsSizeLimit = currentSize + file.FileSize > maxBytesPerGroup;
+
+                    if ((exceedsFileLimit || exceedsSizeLimit) && currentFiles.Count > 0)
+                    {
+                        result.Add(new FileGroup
+                        {
+                            Index = groupIndex++,
+                            GroupType = typeGroup.Key,
+                            Files = new List<PendingFileEntry>(currentFiles)
+                        });
+
+                        currentFiles.Clear();
+                        currentSize = 0;
+                    }
+
+                    currentFiles.Add(file);
+                    currentSize += file.FileSize;
+                }
+
+                // Add remaining files in the group
+                if (currentFiles.Count > 0)
                 {
                     result.Add(new FileGroup
                     {
@@ -35,29 +56,16 @@ public static class FileGrouper
                         GroupType = typeGroup.Key,
                         Files = new List<PendingFileEntry>(currentFiles)
                     });
-
-                    currentFiles.Clear();
-                    currentSize = 0;
                 }
-
-                currentFiles.Add(file);
-                currentSize += file.FileSize;
-            }
-
-            // Add remaining files in the group
-            if (currentFiles.Count > 0)
-            {
-                result.Add(new FileGroup
+                reporter.Info($"Grouped {typeGroup.Count()} files of type {typeGroup.Key} into {result.Count(g => g.GroupType == typeGroup.Key)} chunk group(s).");
+                scope.AddListItem("groups", new
                 {
-                    Index = groupIndex++,
-                    GroupType = typeGroup.Key,
-                    Files = new List<PendingFileEntry>(currentFiles)
+                    groupType = typeGroup.Key.ToString(),
+                    fileCount = typeGroup.Count(),
+                    totalBytes = typeGroup.Sum(f => f.FileSize)
                 });
             }
-
-            reporter.Info($"Grouped {typeGroup.Count()} files of type {typeGroup.Key} into {result.Count(g => g.GroupType == typeGroup.Key)} chunk group(s).");
         }
-
         return result;
     }
 }
