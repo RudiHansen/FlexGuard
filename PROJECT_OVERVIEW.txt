@@ -193,6 +193,7 @@ PLANNED v0.4 / DONE
   The problem occurs in CompressorZstd when compressing large files, so i fixed it, by changing the code.
 - Improve exclude pattern matching to ensure recursive and case-insensitive filtering for directories like 'obj' and '.vs'.
 - Ensure ChunkProcessor avoids double-compression by skipping inner ZIP compression and conditionally applying outer compression based on file group type (Todoist Task)
+  Also seems like this gave a performance boost (39.6% in one test), as it avoids unnecessary compression steps.
 
 PLANNED v0.4 / NEXT
 - Hash per chunk file and optional manifest signing
@@ -200,6 +201,10 @@ PLANNED v0.4 / NEXT
 
 
 TODO / FUTURE WORK
+- Performance measurement tools, measure I/O, Memory usage, CPU usage, compression, etc.
+- Cleanup CLI/Program.cs, its a mess right now.
+- CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
+- Compression analyzer, option to run a compression analysis of files to determine the best compression strategy.
 - Test suite expansion: unit tests for parsers/selectors, integration tests for end-to-end backup/restore.
 - VSS (Windows) integration for locked/open files.
 - Snapshot/transactional consistency for manifests.
