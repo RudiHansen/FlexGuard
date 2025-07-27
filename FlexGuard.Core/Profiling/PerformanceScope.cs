@@ -23,6 +23,7 @@ namespace FlexGuard.Core.Profiling
             _stopwatch.Stop();
             long memoryAfter = GC.GetTotalMemory(false);
             _tracker.RecordSection(_name, _stopwatch.Elapsed, _memoryBefore, memoryAfter);
+            GC.SuppressFinalize(this);
         }
     }
 }

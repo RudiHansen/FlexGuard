@@ -11,7 +11,7 @@ namespace FlexGuard.Core.Profiling
         private readonly List<ChunkMetrics> _chunks = new();
 
         private TimeSpan _cpuStart;
-        private Stopwatch _wallClock;
+        private Stopwatch _wallClock = null!;
         private long _memoryStart;
 
         public void StartGlobal()
