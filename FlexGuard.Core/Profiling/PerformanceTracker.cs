@@ -1,121 +1,57 @@
+// PerformanceTracker.cs
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace FlexGuard.Core.Profiling
 {
     public class PerformanceTracker
     {
-        private static PerformanceTracker? _instance;
-        public static PerformanceTracker Instance => _instance ??= new PerformanceTracker();
+        private static readonly Lazy<PerformanceTracker> _instance = new(() => new PerformanceTracker());
+        public static PerformanceTracker Instance => _instance.Value;
 
-        private readonly Dictionary<string, SectionMetrics> _sections = new();
-        private readonly List<ChunkMetrics> _chunks = new();
+        private readonly StreamWriter _writer;
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
 
-        private TimeSpan _cpuStart;
-        private Stopwatch _wallClock = null!;
-        private long _memoryStart;
-
-        private StreamWriter? _logWriter;
-        private readonly string _logFilePath = $"Logs/{DateTime.Now:yyyy-MM-dd_HHmmss}.performance.jsonl";
-        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
-        public void StartGlobal()
+        private PerformanceTracker()
         {
             Directory.CreateDirectory("Logs");
-            _logWriter = new StreamWriter(_logFilePath, append: true);
-
-            _cpuStart = Process.GetCurrentProcess().TotalProcessorTime;
-            _wallClock = Stopwatch.StartNew();
-            _memoryStart = GC.GetTotalMemory(false);
+            string path = Path.Combine("Logs", $"{DateTime.Now:yyyy-MM-dd_HHmmss}.performance.jsonl");
+            _writer = new StreamWriter(path);
         }
+
+        public void StartGlobal() { }
 
         public void EndGlobal()
         {
-            _wallClock.Stop();
-
-            var cpuTime = Process.GetCurrentProcess().TotalProcessorTime - _cpuStart;
-            var wallTime = _wallClock.Elapsed;
-            var cpuPercent = wallTime.TotalSeconds > 0 ? (cpuTime.TotalSeconds / wallTime.TotalSeconds) * 100 : 0;
-            var memoryEnd = GC.GetTotalMemory(false);
-
-            Log(new
+            var proc = Process.GetCurrentProcess();
+            var summary = new
             {
                 type = "summary",
-                wallTime = wallTime.ToString(),
-                cpuTime = cpuTime.ToString(),
-                cpuPercent,
-                memoryStart = _memoryStart,
-                memoryEnd
-            });
-
-            _logWriter?.Dispose();
-        }
-
-        public PerformanceScope TrackSection(string name)
-        {
-            return new PerformanceScope(name, this);
-        }
-
-        public void RegisterChunkMetrics(string name, long originalSize, long compressedSize)
-        {
-            var chunk = new ChunkMetrics
-            {
-                ChunkName = name,
-                OriginalSize = originalSize,
-                CompressedSize = compressedSize
+                wallTime = proc.StartTime.ToString("O"),
+                cpuTime = proc.TotalProcessorTime.ToString(),
+                cpuPercent = 0, // placeholder
+                memoryStart = 0,
+                memoryEnd = GC.GetTotalMemory(false)
             };
-            _chunks.Add(chunk);
-
-            Log(new
-            {
-                type = "chunk",
-                chunkName = name,
-                originalSize,
-                compressedSize
-            });
+            Log(summary);
+            _writer.Dispose();
         }
 
-        internal void RecordSection(string name, TimeSpan duration, long memoryBefore, long memoryAfter, Dictionary<string, object> context)
-        {
-            var section = new SectionMetrics
-            {
-                Name = name,
-                Duration = duration,
-                MemoryBefore = memoryBefore,
-                MemoryAfter = memoryAfter
-            };
-            _sections[name] = section;
+        public PerformanceScope TrackSection(string name) => new(name);
 
-            Log(new
-            {
-                type = "section",
-                name,
-                duration = duration.ToString(),
-                memoryBefore,
-                memoryAfter,
-                context
-            });
-        }
-
-        private void Log(object record)
+        public void Log(object data)
         {
-            if (_logWriter == null) return;
-            string json = JsonSerializer.Serialize(record, _jsonOptions);
-            _logWriter.WriteLine(json);
-            _logWriter.Flush();
-        }
-
-        public PerformanceReport GenerateReport()
-        {
-            return new PerformanceReport
-            {
-                TotalWallTime = _wallClock.Elapsed,
-                TotalCpuTime = Process.GetCurrentProcess().TotalProcessorTime - _cpuStart,
-                MemoryStart = _memoryStart,
-                MemoryEnd = GC.GetTotalMemory(false),
-                Sections = _sections.Values.ToList(),
-                Chunks = _chunks
-            };
+            string json = JsonSerializer.Serialize(data, _jsonOptions);
+            _writer.WriteLine(json);
+            _writer.Flush();
         }
     }
 }
