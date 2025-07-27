@@ -1,5 +1,6 @@
 ﻿using FlexGuard.Core.Compression;
 using FlexGuard.Core.Manifest;
+using FlexGuard.Core.Profiling;
 using FlexGuard.Core.Reporting;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -31,58 +32,74 @@ public static class ChunkProcessor
 
         try
         {
-            using (var zipFileStream = new FileStream(tempZipPath, FileMode.Create, FileAccess.Write))
-            using (var archive = new ZipArchive(zipFileStream, ZipArchiveMode.Create, leaveOpen: false))
+            using (var scope = PerformanceTracker.Instance.TrackSection("Creating Chunk"))
             {
-                foreach (var file in group.Files)
+                scope.Set("chunkIndex", group.Index);
+                using (var zipFileStream = new FileStream(tempZipPath, FileMode.Create, FileAccess.Write))
+                using (var archive = new ZipArchive(zipFileStream, ZipArchiveMode.Create, leaveOpen: false))
                 {
-                    try
+                    foreach (var file in group.Files)
                     {
-                        using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                        // Compute hash directly from stream
-                        string hash;
-                        using (var sha256 = SHA256.Create())
+                        try
                         {
-                            hash = Convert.ToHexString(sha256.ComputeHash(sourceStream));
-                            sourceStream.Position = 0;
+                            using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                            // Compute hash directly from stream
+                            string hash;
+                            using (var sha256 = SHA256.Create())
+                            {
+                                hash = Convert.ToHexString(sha256.ComputeHash(sourceStream));
+                                sourceStream.Position = 0;
+                            }
+
+                            var entry = archive.CreateEntry(file.RelativePath, zipCompressionLevel);
+                            using var entryStream = entry.Open();
+                            sourceStream.CopyTo(entryStream);
+
+                            manifestBuilder.AddFile(new FileEntry
+                            {
+                                RelativePath = file.RelativePath,
+                                Hash = hash,
+                                ChunkFile = chunkFileName,
+                                FileSize = file.FileSize,
+                                LastWriteTimeUtc = file.LastWriteTimeUtc,
+                                CompressionSkipped = (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible),
+                                CompressionRatio = 0
+                            });
                         }
-
-                        var entry = archive.CreateEntry(file.RelativePath, zipCompressionLevel);
-                        using var entryStream = entry.Open();
-                        sourceStream.CopyTo(entryStream);
-
-                        manifestBuilder.AddFile(new FileEntry
+                        catch (Exception ex)
                         {
-                            RelativePath = file.RelativePath,
-                            Hash = hash,
-                            ChunkFile = chunkFileName,
-                            FileSize = file.FileSize,
-                            LastWriteTimeUtc = file.LastWriteTimeUtc,
-                            CompressionSkipped = (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible),
-                            CompressionRatio = 0
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        reporter.Warning($"Failed to add file '{file.SourcePath}': {ex.Message}");
+                            reporter.Warning($"Failed to add file '{file.SourcePath}': {ex.Message}");
+                        }
                     }
                 }
             }
-
-            // Step 2: Apply outer compression (GZip, Brotli, or Zstd) unless group is marked as non-compressible
-            if (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible)
+            using (var scope = PerformanceTracker.Instance.TrackSection("Compress Chunk"))
             {
-                File.Copy(tempZipPath, outputPath, overwrite: true);
-            }
-            else
-            {
-                using var zipInput = new FileStream(tempZipPath, FileMode.Open, FileAccess.Read);
-                using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-                compressor.Compress(zipInput, outStream);
-            }
+                scope.Set("chunkIndex", group.Index);
+                var originalSize = new FileInfo(tempZipPath).Length;
+                // Step 2: Apply outer compression (GZip, Brotli, or Zstd) unless group is marked as non-compressible
+                if (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible)
+                {
+                    File.Copy(tempZipPath, outputPath, overwrite: true);
+                }
+                else
+                {
+                    using var zipInput = new FileStream(tempZipPath, FileMode.Open, FileAccess.Read);
+                    using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+                    compressor.Compress(zipInput, outStream);
+                }
 
-            reporter.Info($"Chunk {group.Index} written to '{outputPath}' using {compressor.Name}");
+                var compressedSize = new FileInfo(outputPath).Length;
+                var ratio = originalSize > 0
+                    ? (1.0 - ((double)compressedSize / originalSize)) * 100.0
+                    : 0;
+
+                scope.Set("originalSize", originalSize);
+                scope.Set("compressedSize", compressedSize);
+                scope.Set("compressionRatio", ratio);
+                reporter.Info($"Chunk {group.Index} written to '{outputPath}' using {compressor.Name} CR {ratio:F0}%");
+            }
         }
         catch (Exception ex)
         {
