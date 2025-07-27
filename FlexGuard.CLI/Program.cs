@@ -88,10 +88,14 @@ class Program
             var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
             registryManager.Save();
 
-            var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
-            FileListReporter.ReportSummary(allFiles, reporter);
+            List<FlexGuard.Core.Manifest.PendingFileEntry> allFiles = new();
+            using (tracker.TrackSection("FileCollector.CollectFiles"))
+            {
+                allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
+                FileListReporter.ReportSummary(allFiles, reporter);
+                reporter.Info($"Found {allFiles.Count} files to back up.");
+            }
 
-            reporter.Info($"Found {allFiles.Count} files to back up.");
 
             reporter.Info("Grouping files into groups...");
             var fileGroups = FileGrouper.GroupFiles(allFiles, options.MaxFilesPerGroup, options.MaxBytesPerGroup, reporter);
