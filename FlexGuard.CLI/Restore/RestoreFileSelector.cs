@@ -20,6 +20,7 @@ public class RestoreFileSelector
     public record RestoreSelection(
         string RelativePath,
         string ChunkFile,
+        long FileSize,
         string Hash,
         BackupRegistry.BackupEntry BackupEntry,
         CompressionMethod Compression);
@@ -63,6 +64,7 @@ public class RestoreFileSelector
             .Select(f => new RestoreSelection(
                 f.RelativePath,
                 f.ChunkFile,
+                f.FileSize,
                 f.Hash,
                 manifestEntry,
                 manifest.Compression))  // Include compression method

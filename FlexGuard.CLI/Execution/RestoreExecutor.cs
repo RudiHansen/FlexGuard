@@ -4,6 +4,7 @@ using FlexGuard.Core.Options;
 using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Restore;
+using FlexGuard.Core.Util;
 
 namespace FlexGuard.CLI.Execution;
 
@@ -16,9 +17,13 @@ public static class RestoreExecutor
         IMessageReporter reporter)
     {
         reporter.Info("Restore from backup...");
+        reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
 
         var selector = new RestoreFileSelector(registryManager.GetRegistry(), Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName));
         var selectedFiles = selector.SelectFiles();
+        var totalSize = selectedFiles.Sum(f => f.FileSize);
+
+        reporter.Info($"Total: {selectedFiles.Count} files, {FormatHelper.FormatBytes(totalSize)}");
 
         foreach (var file in selectedFiles)
         {

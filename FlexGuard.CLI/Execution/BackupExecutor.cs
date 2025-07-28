@@ -17,6 +17,8 @@ public static class BackupExecutor
         BackupRegistryManager registryManager,
         IMessageReporter reporter)
     {
+        reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
+
         DateTime? lastBackupTime = null;
 
         if (options.Mode == OperationMode.DifferentialBackup)
@@ -24,7 +26,6 @@ public static class BackupExecutor
             var lastBackupEntry = registryManager.GetLatestEntry();
             lastBackupTime = lastBackupEntry?.TimestampStart;
         }
-        reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
 
         var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
         registryManager.Save();
