@@ -9,6 +9,10 @@ class Program
         PerformanceTracker.Instance.StartGlobal();
         CliEntrypoint.Run(args);
         PerformanceTracker.Instance.EndGlobal();
-        NotificationHelper.PlayBackupCompleteSound();
+        var elapsed = PerformanceTracker.Instance.GetGlobalElapsed();
+        if (elapsed.TotalMinutes >= 5)
+        {
+            NotificationHelper.PlayBackupCompleteSound();
+        }
     }
 }
