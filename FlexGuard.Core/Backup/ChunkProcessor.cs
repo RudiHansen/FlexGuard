@@ -65,6 +65,7 @@ public static class ChunkProcessor
                                 CompressionSkipped = (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible),
                                 CompressionRatio = 0
                             });
+                            reporter.ReportProgress(file.FileSize, file.RelativePath);
                         }
                         catch (Exception ex)
                         {

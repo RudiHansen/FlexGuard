@@ -3,6 +3,8 @@ using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
+using Spectre.Console;
+using System.Threading.Tasks;
 
 namespace FlexGuard.CLI.Execution;
 
@@ -26,6 +28,7 @@ public static class BackupExecutor
         registryManager.Save();
 
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
+        var totalSize = allFiles.Sum(f => f.FileSize);
 
         var fileGroups = FileGrouper.GroupFiles(allFiles, options.MaxFilesPerGroup, options.MaxBytesPerGroup);
 
@@ -34,12 +37,29 @@ public static class BackupExecutor
 
         string backupFolderPath = Path.Combine(jobConfig.DestinationPath, backupEntry.DestinationFolderName);
 
-        int current = 1;
-        foreach (var group in fileGroups)
-        {
-            ChunkProcessor.Process(group, backupFolderPath, reporter, manifestBuilder);
-            current++;
-        }
+        AnsiConsole.Progress()
+            .AutoClear(false)
+            .HideCompleted(false)
+            .Columns(
+                new TaskDescriptionColumn(),
+                new ProgressBarColumn(),
+                new PercentageColumn(),
+                new RemainingTimeColumn())
+            .Start(ctx =>
+            {
+                var task = ctx.AddTask("Backing up files...", maxValue: totalSize);
+
+                var reporterWithProgress = new MessageReporterWithProgress(reporter, totalSize,
+                    (currentBytes, totalBytes, _) =>
+                    {
+                        task.Value = currentBytes;
+                    });
+
+                foreach (var group in fileGroups)
+                {
+                    ChunkProcessor.Process(group, backupFolderPath, reporterWithProgress, manifestBuilder);
+                }
+            });
 
         string manifestFileName = manifestBuilder.Save(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName));
 

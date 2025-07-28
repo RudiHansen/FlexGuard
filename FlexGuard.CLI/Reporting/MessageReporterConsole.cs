@@ -62,7 +62,11 @@ public class MessageReporterConsole : IMessageReporter
         Console.WriteLine(message);
         Log(message);
     }
-    public void ReportProgress(int current, int total, string file)
+    public void ReportProgress(long currentBytes, long totalBytes, string file)
+    {
+        // Optional default implementation (does nothing)
+    }
+    public void ReportProgress(long fileSize, string filename)
     {
         // Optional default implementation (does nothing)
     }
