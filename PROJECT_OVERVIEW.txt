@@ -212,6 +212,7 @@ PLANNED v0.4 / NEXT
 
 
 TODO / FUTURE WORK
+- Refactor: Unify job folder path logic (AppContext.BaseDirectory + "Jobs" + jobName)
 - Backup job validation
 - Validate and normalize absolute paths in job config to avoid relative resolution errors
 - Automated integrity check tool
