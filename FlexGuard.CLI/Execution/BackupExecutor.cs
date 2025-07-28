@@ -3,6 +3,7 @@ using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
+using FlexGuard.Core.Util;
 using Spectre.Console;
 using System.Threading.Tasks;
 
@@ -23,6 +24,7 @@ public static class BackupExecutor
             var lastBackupEntry = registryManager.GetLatestEntry();
             lastBackupTime = lastBackupEntry?.TimestampStart;
         }
+        reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
 
         var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
         registryManager.Save();
@@ -36,6 +38,8 @@ public static class BackupExecutor
             options.JobName, options.Mode, backupEntry.TimestampStart, options.Compression);
 
         string backupFolderPath = Path.Combine(jobConfig.DestinationPath, backupEntry.DestinationFolderName);
+
+        reporter.Info($"Total: {allFiles.Count} files, {FormatHelper.FormatBytes(totalSize)}, {fileGroups.Count} group(s)");
 
         AnsiConsole.Progress()
             .AutoClear(false)

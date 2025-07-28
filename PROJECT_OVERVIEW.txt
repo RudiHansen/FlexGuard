@@ -212,6 +212,9 @@ PLANNED v0.4 / NEXT
 
 
 TODO / FUTURE WORK
+- Improve progress display by adapting to total job size.
+  (BackupExecutor.Run): 
+  Use simple byte-based progress for small jobs (<1GB), and detailed two-level progress (total + group/file) for large backups.
 - Refactor: Unify job folder path logic (AppContext.BaseDirectory + "Jobs" + jobName)
 - Backup job validation
 - Validate and normalize absolute paths in job config to avoid relative resolution errors
