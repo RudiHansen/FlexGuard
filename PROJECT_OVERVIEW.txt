@@ -202,10 +202,10 @@ PLANNED v0.4 / DONE
 	- Logging of chunk compression ratios
 	- JSON output saved during execution for post-analysis
 	- Support for context data (e.g., group stats, file counts)
+- Cleanup CLI/Program.cs, its a mess right now.
 
 
 PLANNED v0.4 / NEXT
-- Cleanup CLI/Program.cs, its a mess right now.
 - CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
 - Hash per chunk file and optional manifest signing
 - Remote/cloud targets SCP/SSH

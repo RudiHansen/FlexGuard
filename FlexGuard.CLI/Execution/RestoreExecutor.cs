@@ -35,5 +35,6 @@ public static class RestoreExecutor
                 file.Compression,
                 reporter);
         }
+        reporter.Success("Restore process completed successfully.");
     }
 }

@@ -19,7 +19,6 @@ public static class ChunkProcessor
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
 
         Directory.CreateDirectory(backupFolderPath);
-        reporter.Info($"Processing chunk {group.Index} with {group.Files.Count} files ({group.GroupType})...");
 
         // Determine ZIP compression level based on group type (internal to the ZIP)
         var zipCompressionLevel = CompressionLevel.NoCompression;
@@ -99,7 +98,6 @@ public static class ChunkProcessor
                 scope.Set("originalSize", originalSize);
                 scope.Set("compressedSize", compressedSize);
                 scope.Set("compressionRatio", ratio);
-                reporter.Info($"Chunk {group.Index} written to '{outputPath}' using {compressor.Name} CR {ratio:F0}%");
             }
         }
         catch (Exception ex)

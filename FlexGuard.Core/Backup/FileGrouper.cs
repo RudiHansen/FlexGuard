@@ -10,8 +10,7 @@ public static class FileGrouper
     public static List<FileGroup> GroupFiles(
         List<PendingFileEntry> files,
         int maxFilesPerGroup,
-        long maxBytesPerGroup,
-        IMessageReporter reporter)
+        long maxBytesPerGroup)
     {
         var result = new List<FileGroup>();
         int groupIndex = 0;
@@ -57,7 +56,6 @@ public static class FileGrouper
                         Files = new List<PendingFileEntry>(currentFiles)
                     });
                 }
-                reporter.Info($"Grouped {typeGroup.Count()} files of type {typeGroup.Key} into {result.Count(g => g.GroupType == typeGroup.Key)} chunk group(s).");
                 scope.AddListItem("groups", new
                 {
                     groupType = typeGroup.Key.ToString(),

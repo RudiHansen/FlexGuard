@@ -19,8 +19,6 @@ public static class CliEntrypoint
         ProgramOptions? options = ProgramOptionsParser.Parse(args, reporter);
         if (options == null) return;
 
-        reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
-
         var jobConfig = JobLoader.Load(options.JobName);
         var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
         var registry = new BackupRegistryManager(options.JobName, localJobsFolder);
