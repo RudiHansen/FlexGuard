@@ -11,6 +11,7 @@ public static class RestoreHelper
         string restoreTargetFolder,
         string chunkFilePath,
         string relativePath,
+        long fileSize,
         string expectedHash,
         CompressionMethod compressionMethod,
         IMessageReporter reporter)
@@ -68,7 +69,7 @@ public static class RestoreHelper
             }
             else
             {
-                reporter.Info($"Restored file to: {outputPath}");
+                reporter.ReportProgress(fileSize, relativePath);
             }
         }
         catch (Exception ex)
