@@ -43,8 +43,7 @@ public static class BackupExecutor
             .Columns(
                 new TaskDescriptionColumn(),
                 new ProgressBarColumn(),
-                new PercentageColumn(),
-                new RemainingTimeColumn())
+                new PercentageColumn())
             .Start(ctx =>
             {
                 var task = ctx.AddTask("Backing up files...", maxValue: totalSize);
