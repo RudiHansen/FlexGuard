@@ -205,15 +205,18 @@ PLANNED v0.4 / DONE
 
 
 PLANNED v0.4 / NEXT
+- Cleanup CLI/Program.cs, its a mess right now.
+- CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
 - Hash per chunk file and optional manifest signing
 - Remote/cloud targets SCP/SSH
 
 
 TODO / FUTURE WORK
-- Extra option for --mode auto, which automatically selects the best backup mode based on the last backup time.
-- Cleanup CLI/Program.cs, its a mess right now.
-- CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
+- Backup job validation
+- Validate and normalize absolute paths in job config to avoid relative resolution errors
+- Automated integrity check tool
 - Compression analyzer, option to run a compression analysis of files to determine the best compression strategy.
+- Extra option for --mode auto, which automatically selects the best backup mode based on the last backup time.
 - Test suite expansion: unit tests for parsers/selectors, integration tests for end-to-end backup/restore.
 - VSS (Windows) integration for locked/open files.
 - Snapshot/transactional consistency for manifests.
@@ -223,10 +226,39 @@ TODO / FUTURE WORK
 - Smarter restore: optionally rehydrate only new/changed files from diffs automatically.
 - Cross-platform support (Linux)
 - Prebuilt binaries / Release automation (CI/CD)
-- Backup job validation
-- Automated integrity check tool
-- Validate and normalize absolute paths in job config to avoid relative resolution errors
 - Recheck --maxbytes parameter, it is really in bytes, that might be a bad idea.
 - PerformanceTracker: Consider switching to proper .jsonl or .json array format if automated analysis tools are added
 - PerformanceTracker: Potentially add I/O tracking if deeper disk performance insights are needed
 - PerformanceTracker: Build analyzer or visualization tool to consume and display profiling output
+- ProgramOptionsParser: Add better error handling for invalid arguments
+- Add restore --dry-run mode to simulate restore without writing files. Useful for verifying what would be restored, especially in scripted or automated workflows.
+- Ensure all configurable options in job.json are also available as CLI flags, including RestoreTargetFolder, compression settings, limits, etc. Improves flexibility for scripting and dynamic usage.
+
+
+
+IDEAS / FUTURE CONCEPTS
+- Chunk optimization tool
+  Over time – especially with differential/incremental backups – many small or uneven chunks can accumulate, which could be merged or reorganized.
+  Purpose:
+    - Reduce disk usage (fewer small chunks)
+    - Improve restore performance (less fragmentation)
+    - Simplify retention management
+  Possible implementation:
+    - Add a separate command, e.g., `flexguard optimize`
+    - It scans the backup directory, identifies small or fragmented chunks, and recombines them into new optimized chunks
+    - Reuse the existing Grouping+Chunking logic from backup, but operate solely on existing data
+  Status:
+    - No urgent need now, but useful as a maintenance tool in long-term backup scenarios
+  - Backup tagging and labeling
+    Allow users to assign custom labels to each backup, such as "before-upgrade", "monthly", or "critical".
+    Purpose:
+      - Improve backup identification and user context
+      - Support better visual overview in commands like `list`
+      - Enable smarter retention or restore filters based on labels
+    Possible implementation:
+      - Add `"labels": []` field to the manifest file
+      - Allow CLI flag: `--label="monthly"` when running backup
+      - Update `list` to show labels alongside other backup metadata
+      - Allow future commands (e.g., restore or retention) to filter by label
+    Status:
+      - Low priority for now, but potentially powerful for organizing backups in larger or long-term setups

@@ -77,6 +77,7 @@ public static class ChunkProcessor
             using (var scope = PerformanceTracker.Instance.TrackSection("Compress Chunk"))
             {
                 scope.Set("chunkIndex", group.Index);
+                scope.Set("chunkType", group.GroupType.ToString());
                 var originalSize = new FileInfo(tempZipPath).Length;
                 // Step 2: Apply outer compression (GZip, Brotli, or Zstd) unless group is marked as non-compressible
                 if (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible)
