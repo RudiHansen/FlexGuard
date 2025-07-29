@@ -1,7 +1,7 @@
 ﻿using FlexGuard.Core.Compression;
 using FlexGuard.Core.Reporting;
+using FlexGuard.Core.Util;
 using System.IO.Compression;
-using System.Security.Cryptography;
 
 namespace FlexGuard.Core.Restore;
 
@@ -62,7 +62,7 @@ public static class RestoreHelper
             }
 
             // Verify hash
-            var actualHash = ComputeSha256(outputPath);
+            var actualHash = HashHelper.ComputeHash(outputPath);
             if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
             {
                 reporter.Warning($"Hash mismatch for '{relativePath}'. Expected: {expectedHash}, Actual: {actualHash}");
@@ -76,13 +76,5 @@ public static class RestoreHelper
         {
             reporter.Error($"Restore failed for '{relativePath}': {ex.Message}");
         }
-    }
-
-    private static string ComputeSha256(string filePath)
-    {
-        using var stream = File.OpenRead(filePath);
-        using var sha256 = SHA256.Create();
-        var hash = sha256.ComputeHash(stream);
-        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 }

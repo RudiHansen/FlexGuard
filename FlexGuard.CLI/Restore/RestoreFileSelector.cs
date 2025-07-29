@@ -46,7 +46,7 @@ public class RestoreFileSelector
 
         // 2. Load manifest
         var manifestJson = File.ReadAllText(manifestPath);
-        var manifest = JsonSerializer.Deserialize<BackupManifest>(manifestJson);
+        var manifest = JsonSerializer.Deserialize<FileManifest>(manifestJson);
 
         if (manifest == null)
         {

@@ -2,8 +2,8 @@
 using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Profiling;
 using FlexGuard.Core.Reporting;
+using FlexGuard.Core.Util;
 using System.IO.Compression;
-using System.Security.Cryptography;
 
 namespace FlexGuard.Core.Backup;
 
@@ -13,7 +13,8 @@ public static class ChunkProcessor
         FileGroup group,
         string backupFolderPath,
         IMessageReporter reporter,
-        BackupManifestBuilder manifestBuilder)
+        FileManifestBuilder fileManifestBuilder,
+        HashManifestBuilder hashManifestBuilder)
     {
         var chunkFileName = $"{group.Index:D4}.fgchunk";
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
@@ -24,7 +25,7 @@ public static class ChunkProcessor
         var zipCompressionLevel = CompressionLevel.NoCompression;
 
         // Select outer compressor based on the manifest (GZip, Brotli, Zstd)
-        var compressor = CompressorFactory.Create(manifestBuilder.Compression);
+        var compressor = CompressorFactory.Create(fileManifestBuilder.Compression);
 
         // Step 1: Create temporary zip file
         var tempZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -44,18 +45,13 @@ public static class ChunkProcessor
                             using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                             // Compute hash directly from stream
-                            string hash;
-                            using (var sha256 = SHA256.Create())
-                            {
-                                hash = Convert.ToHexString(sha256.ComputeHash(sourceStream));
-                                sourceStream.Position = 0;
-                            }
+                            string hash = HashHelper.ComputeHash(sourceStream);
 
                             var entry = archive.CreateEntry(file.RelativePath, zipCompressionLevel);
                             using var entryStream = entry.Open();
                             sourceStream.CopyTo(entryStream);
 
-                            manifestBuilder.AddFile(new FileEntry
+                            fileManifestBuilder.AddFile(new FileEntry
                             {
                                 RelativePath = file.RelativePath,
                                 Hash = hash,
@@ -90,6 +86,14 @@ public static class ChunkProcessor
                     using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
                     compressor.Compress(zipInput, outStream);
                 }
+
+                string chunkHash = HashHelper.ComputeHash(outputPath);
+                hashManifestBuilder.AddChunk(new ChunkHashEntry
+                {
+                    ChunkFile = $"{group.Index:D4}.fgchunk",
+                    Hash = chunkHash,
+                    SizeBytes = new FileInfo(outputPath).Length
+                });
 
                 var compressedSize = new FileInfo(outputPath).Length;
                 var ratio = originalSize > 0

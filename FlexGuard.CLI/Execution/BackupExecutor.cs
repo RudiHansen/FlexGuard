@@ -1,11 +1,11 @@
 ﻿using FlexGuard.Core.Backup;
 using FlexGuard.Core.Config;
+using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 using Spectre.Console;
-using System.Threading.Tasks;
 
 namespace FlexGuard.CLI.Execution;
 
@@ -35,8 +35,10 @@ public static class BackupExecutor
 
         var fileGroups = FileGrouper.GroupFiles(allFiles, options.MaxFilesPerGroup, options.MaxBytesPerGroup);
 
-        var manifestBuilder = new BackupManifestBuilder(
+        var fileManifestBuilder = new FileManifestBuilder(
             options.JobName, options.Mode, backupEntry.TimestampStart, options.Compression);
+
+        var hashManifestBuilder = new HashManifestBuilder(options.JobName, backupEntry.TimestampStart);
 
         string backupFolderPath = Path.Combine(jobConfig.DestinationPath, backupEntry.DestinationFolderName);
 
@@ -61,19 +63,22 @@ public static class BackupExecutor
 
                 foreach (var group in fileGroups)
                 {
-                    ChunkProcessor.Process(group, backupFolderPath, reporterWithProgress, manifestBuilder);
+                    ChunkProcessor.Process(group, backupFolderPath, reporterWithProgress, fileManifestBuilder, hashManifestBuilder);
                 }
             });
 
-        string manifestFileName = manifestBuilder.Save(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName));
+        string fileManifestFileName = fileManifestBuilder.Save(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName));
+        string hashManifestFileName = hashManifestBuilder.Save(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName));
 
         backupEntry.TimestampEnd = DateTime.UtcNow;
         registryManager.Save();
 
-        File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, manifestFileName),
-                  Path.Combine(backupFolderPath, manifestFileName), true);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, fileManifestFileName),
+                  Path.Combine(backupFolderPath, fileManifestFileName), true);
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, $"registry_{options.JobName}.json"),
                   Path.Combine(backupFolderPath, $"registry_{options.JobName}.json"), true);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, hashManifestFileName),
+                  Path.Combine(backupFolderPath, hashManifestFileName),true);
 
         reporter.Success("Backup process completed successfully.");
     }

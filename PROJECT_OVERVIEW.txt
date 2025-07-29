@@ -203,15 +203,19 @@ PLANNED v0.4 / DONE
 	- JSON output saved during execution for post-analysis
 	- Support for context data (e.g., group stats, file counts)
 - Cleanup CLI/Program.cs, its a mess right now.
+- CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
 
 
 PLANNED v0.4 / NEXT
-- CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
-- Hash per chunk file and optional manifest signing
+- Hash per chunk file and verify during restore.
 - Remote/cloud targets SCP/SSH
+- Further investigate Restore error, Restore failed for '': Unknown frame descriptor
 
 
 TODO / FUTURE WORK
+-TODO: Manifest signing
+  Add support for signing filemanifest.json and/or hashmanifest.json to ensure authenticity. Requires key management and signature verification. 
+  Controlled via ProgramOptions. CLI flags to be added later.
 - Improve progress display by adapting to total job size.
   (BackupExecutor.Run): 
   Use simple byte-based progress for small jobs (<1GB), and detailed two-level progress (total + group/file) for large backups.
@@ -266,3 +270,7 @@ IDEAS / FUTURE CONCEPTS
       - Allow future commands (e.g., restore or retention) to filter by label
     Status:
       - Low priority for now, but potentially powerful for organizing backups in larger or long-term setups
+- Consider implementing two distinct output modes for the CLI:
+  1. Rich UI Mode — Uses Spectre.Console for progress, formatting, color, and better user experience.
+  2. Minimal Mode — Clean, machine-readable output without Spectre, suitable for Linux terminals, scripting, and logging.
+  Mode could be toggled via --ui=rich|minimal or similar.

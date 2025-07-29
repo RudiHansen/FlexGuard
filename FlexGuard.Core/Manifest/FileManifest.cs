@@ -2,7 +2,7 @@ using FlexGuard.Core.Compression;
 
 namespace FlexGuard.Core.Manifest;
 
-public class BackupManifest
+public class FileManifest
 {
     public required string JobName { get; set; }
     public required string Type { get; set; } = "Full";
