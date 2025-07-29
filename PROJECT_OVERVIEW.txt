@@ -204,12 +204,13 @@ PLANNED v0.4 / DONE
 	- Support for context data (e.g., group stats, file counts)
 - Cleanup CLI/Program.cs, its a mess right now.
 - CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
+- Hash per chunk file and verify during restore.
 
 
 PLANNED v0.4 / NEXT
-- Hash per chunk file and verify during restore.
-- Remote/cloud targets SCP/SSH
+- Refactor task, I need to go through che code to see if there are any quick fixes or improvements that can be made.
 - Further investigate Restore error, Restore failed for '': Unknown frame descriptor
+- Remote/cloud targets SCP/SSH
 
 
 TODO / FUTURE WORK

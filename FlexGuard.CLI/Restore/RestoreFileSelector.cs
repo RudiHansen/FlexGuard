@@ -38,6 +38,7 @@ public class RestoreFileSelector
                 .AddChoices(_registry.Backups));
 
         var manifestPath = Path.Combine(_jobFolder, manifestEntry.ManifestFileName);
+        var chunkManifestPath = Path.Combine(_jobFolder, manifestEntry.HashManifestFileName);
 
         if (!File.Exists(manifestPath))
         {
@@ -60,7 +61,7 @@ public class RestoreFileSelector
         var selectedPaths = DirectoryViewSelector.Show(allFiles);
 
         // Initialize the hash manifest helper
-        var hashHelper = new HashManifestHelper(manifestEntry.HashManifestFileName);
+        var hashHelper = new HashManifestHelper(chunkManifestPath);
 
         // 4. Match back to full manifest entries, including compression method
         var selections = manifest.Files
