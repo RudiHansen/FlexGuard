@@ -12,7 +12,8 @@ namespace FlexGuard.Core.Registry
             public required DateTime TimestampStart { get; set; }
             public DateTime? TimestampEnd { get; set; }
             public required OperationMode Type { get; set; }
-            public string ManifestFileName => $"manifest_{TimestampStart:yyyy-MM-ddTHHmm}.json";
+            public string ManifestFileName => $"filemanifest_{TimestampStart:yyyy-MM-ddTHHmm}.json";
+            public string HashManifestFileName => $"hashmanifest_{TimestampStart:yyyy-MM-ddTHHmm}.json";
 
             public string DestinationFolderName => $"{TimestampStart:yyyy-MM-ddTHHmm}_{GetShortType()}";
             private string GetShortType() => Type switch

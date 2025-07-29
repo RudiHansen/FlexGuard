@@ -52,9 +52,10 @@ public static class RestoreExecutor
                         RestoreHelper.RestoreFile(
                             jobConfig.RestoreTargetFolder,
                             chunkPath,
+                            file.ChunkHash,
                             file.RelativePath,
                             file.FileSize,
-                            file.Hash,
+                            file.FileHash,
                             file.Compression,
                             reporterWithProgress);
                     }

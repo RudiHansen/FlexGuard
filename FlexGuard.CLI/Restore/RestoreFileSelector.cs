@@ -20,8 +20,9 @@ public class RestoreFileSelector
     public record RestoreSelection(
         string RelativePath,
         string ChunkFile,
+        string ChunkHash,
         long FileSize,
-        string Hash,
+        string FileHash,
         BackupRegistry.BackupEntry BackupEntry,
         CompressionMethod Compression);
 
@@ -58,18 +59,21 @@ public class RestoreFileSelector
         var allFiles = manifest.Files.Select(f => f.RelativePath).Distinct().OrderBy(p => p).ToList();
         var selectedPaths = DirectoryViewSelector.Show(allFiles);
 
+        // Initialize the hash manifest helper
+        var hashHelper = new HashManifestHelper(manifestEntry.HashManifestFileName);
+
         // 4. Match back to full manifest entries, including compression method
         var selections = manifest.Files
             .Where(f => selectedPaths.Contains(f.RelativePath))
             .Select(f => new RestoreSelection(
                 f.RelativePath,
                 f.ChunkFile,
+                hashHelper.GetChunkHash(f.ChunkFile),
                 f.FileSize,
                 f.Hash,
                 manifestEntry,
-                manifest.Compression))  // Include compression method
+                manifest.Compression))
             .ToList();
-
         
         return selections;
     }

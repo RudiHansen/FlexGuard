@@ -10,6 +10,7 @@ public static class RestoreHelper
     public static void RestoreFile(
         string restoreTargetFolder,
         string chunkFilePath,
+        string chunkHash,
         string relativePath,
         long fileSize,
         string expectedHash,
@@ -26,6 +27,16 @@ public static class RestoreHelper
         {
             reporter.Error($"Chunk file not found: {chunkFilePath}");
             return;
+        }
+        if (!string.IsNullOrEmpty(chunkHash))
+        {
+            var actualHash = HashHelper.ComputeHash(chunkFilePath);
+            if (!chunkHash.Equals(actualHash, StringComparison.OrdinalIgnoreCase))
+            {
+                reporter.Error($"Chunk hash mismatch: {chunkFilePath}");
+                return;
+            }
+            reporter.Debug($"Chunk hash verified: {chunkFilePath}");
         }
 
         try
