@@ -22,6 +22,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{02EA681E-C
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Images", "Images", "{08C31E2F-74BF-4C34-ABB2-651856BC3D6A}"
+	ProjectSection(SolutionItems) = preProject
+		Images\ChatGPT Image 28. jul. 2025, 23.15.28.png = Images\ChatGPT Image 28. jul. 2025, 23.15.28.png
+		Images\ChatGPT Image 28. jul. 2025, 23.18.33.png = Images\ChatGPT Image 28. jul. 2025, 23.18.33.png
+		Images\ChatGPT Image 28. jul. 2025, 23.25.33.png = Images\ChatGPT Image 28. jul. 2025, 23.25.33.png
+		Images\ChatGPT Image 28. jul. 2025, 23.28.31.png = Images\ChatGPT Image 28. jul. 2025, 23.28.31.png
+		Images\ChatGPT Image 28. jul. 2025, 23.41.03.png = Images\ChatGPT Image 28. jul. 2025, 23.41.03.png
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

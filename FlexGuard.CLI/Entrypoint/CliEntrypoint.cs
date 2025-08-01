@@ -13,7 +13,7 @@ public static class CliEntrypoint
     public static void Run(string[] args)
     {
         using var scope = PerformanceTracker.Instance.TrackSection("Main");
-        var reporter = new MessageReporterConsole(debugToConsole: true, debugToFile: true);
+        var reporter = new MessageReporterConsole(debugToConsole: false, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
         ProgramOptions? options = ProgramOptionsParser.Parse(args, reporter);

@@ -220,7 +220,12 @@ TODO / FUTURE WORK
 - Improve progress display by adapting to total job size.
   (BackupExecutor.Run): 
   Use simple byte-based progress for small jobs (<1GB), and detailed two-level progress (total + group/file) for large backups.
+- Is there a way to optimize the way we read the single files and writhe them to the chunks?
+  Perhaps we can use a buffer?
 - Refactor: Unify job folder path logic (AppContext.BaseDirectory + "Jobs" + jobName)
+- Chunk file size
+  Need to checkup on if we utilize the chunk file size correctly, and if it is set correctly.
+  We also need an way to split chunks, so when we backup a large file, we can split it into smaller chunks.
 - Backup job validation
 - Validate and normalize absolute paths in job config to avoid relative resolution errors
 - Automated integrity check tool
@@ -242,12 +247,20 @@ TODO / FUTURE WORK
 - ProgramOptionsParser: Add better error handling for invalid arguments
 - Add restore --dry-run mode to simulate restore without writing files. Useful for verifying what would be restored, especially in scripted or automated workflows.
 - Ensure all configurable options in job.json are also available as CLI flags, including RestoreTargetFolder, compression settings, limits, etc. Improves flexibility for scripting and dynamic usage.
+- Resume backup/restore, we need to find som way to resume a backup or restore, if it was interrupted.
 
 
 
 IDEAS / FUTURE CONCEPTS
 - Chunk optimization tool
   Over time – especially with differential/incremental backups – many small or uneven chunks can accumulate, which could be merged or reorganized.
+  Thourghts:
+    - How should we store data about files that have been backed up?
+      We do need to make sure what we have all the versions of a file, so we can restore it.
+      But we also need to make sure that we do not store the same file multiple times.
+    - How about a tool to read old backups into the new format?
+      I already have other backups that I have made with other tools, that I would like to read into FlexGuard.
+      And I also have all the backups from my dads computer, that I would like to read into FlexGuard.
   Purpose:
     - Reduce disk usage (fewer small chunks)
     - Improve restore performance (less fragmentation)
