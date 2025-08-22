@@ -57,6 +57,7 @@ public static class RestoreExecutor
                             file.FileSize,
                             file.FileHash,
                             file.Compression,
+                            file.CompressionSkipped,
                             reporterWithProgress);
                     }
                 });

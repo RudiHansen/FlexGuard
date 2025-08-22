@@ -24,7 +24,8 @@ public class RestoreFileSelector
         long FileSize,
         string FileHash,
         BackupRegistry.BackupEntry BackupEntry,
-        CompressionMethod Compression);
+        CompressionMethod Compression,
+        bool CompressionSkipped);
 
     public List<RestoreSelection> SelectFiles()
     {
@@ -73,7 +74,8 @@ public class RestoreFileSelector
                 f.FileSize,
                 f.Hash,
                 manifestEntry,
-                manifest.Compression))
+                manifest.Compression,
+                f.CompressionSkipped))
             .ToList();
         
         return selections;

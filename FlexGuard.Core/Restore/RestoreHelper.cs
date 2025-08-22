@@ -15,6 +15,7 @@ public static class RestoreHelper
         long fileSize,
         string expectedHash,
         CompressionMethod compressionMethod,
+        bool compressionSkipped,
         IMessageReporter reporter)
     {
         if (string.IsNullOrWhiteSpace(restoreTargetFolder))
@@ -41,13 +42,21 @@ public static class RestoreHelper
 
         try
         {
-            // Create the correct decompressor
-            var compressor = CompressorFactory.Create(compressionMethod);
-
-            // Open chunk and decompress to memory
+            // Open chunk and decompress or pass-through to memory
             using var chunkStream = new FileStream(chunkFilePath, FileMode.Open, FileAccess.Read);
             using var decompressedStream = new MemoryStream();
-            compressor.Decompress(chunkStream, decompressedStream);
+
+            if (compressionSkipped)
+            {
+                chunkStream.CopyTo(decompressedStream);
+            }
+            else
+            {
+                // Create the correct decompressor
+                var compressor = CompressorFactory.Create(compressionMethod);
+                compressor.Decompress(chunkStream, decompressedStream);
+            }
+
             decompressedStream.Position = 0;
 
             using var zipArchive = new ZipArchive(decompressedStream, ZipArchiveMode.Read);

@@ -205,12 +205,12 @@ PLANNED v0.4 / DONE
 - Cleanup CLI/Program.cs, its a mess right now.
 - CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
 - Hash per chunk file and verify during restore.
+- ERROR: Restore failed for '': Unknown frame descriptor, fixed it was a problem with trying to decompress a file that was not compressed.
 
 
 PLANNED v0.4 / NEXT
-- Refactor task, I need to go through che code to see if there are any quick fixes or improvements that can be made.
-- Further investigate Restore error, Restore failed for '': Unknown frame descriptor
 - Remote/cloud targets SCP/SSH
+- Refactor task, I need to go through che code to see if there are any quick fixes or improvements that can be made.
 
 
 TODO / FUTURE WORK
