@@ -114,7 +114,7 @@ public static class ProgramOptionsParser
         reporter.WriteRaw("  --mode <full|diff|restore>        Operation mode (Full, Differential, or Restore).");
         reporter.WriteRaw("  --maxfiles <int>                  Max files per group (default: 1000).");
         reporter.WriteRaw("  --maxbytes <long>                 Max bytes per group (default: 1GB).");
-        reporter.WriteRaw("  --compression <gzip|brotli|zstd>  Compression method (default: gzip).");
+        reporter.WriteRaw("  --compression <gzip|brotli|zstd>  Compression method (default: zstd).");
         reporter.WriteRaw("  --measure-compression             Enable compression ratio measurement.");
         reporter.WriteRaw("  -v, --version                     Show version.");
         reporter.WriteRaw("  /?, /h, -h, --help                Show this help.");

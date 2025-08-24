@@ -10,7 +10,7 @@ public class ProgramOptionsBuilder
     public int MaxFilesPerGroup { get; set; } = 1000;
     public long MaxBytesPerGroup { get; set; } = 1024 * 1024 * 1024; // 1 GB
     public bool EnableCompressionRatioMeasurement { get; set; } = false;
-    public CompressionMethod Compression { get; set; } = CompressionMethod.GZip;
+    public CompressionMethod Compression { get; set; } = CompressionMethod.Zstd;
 
     public ProgramOptions Build()
     {

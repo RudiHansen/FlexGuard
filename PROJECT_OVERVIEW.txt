@@ -206,6 +206,7 @@ PLANNED v0.4 / DONE
 - CLI UI Overhaul: Better progress indicators, and perhaps also better output in general.
 - Hash per chunk file and verify during restore.
 - ERROR: Restore failed for '': Unknown frame descriptor, fixed it was a problem with trying to decompress a file that was not compressed.
+- Change Default compression from gzip to zstd.
 
 
 PLANNED v0.4 / NEXT
@@ -214,7 +215,8 @@ PLANNED v0.4 / NEXT
 
 
 TODO / FUTURE WORK
--TODO: Manifest signing
+- Handle file exist on restore.
+- TODO: Manifest signing
   Add support for signing filemanifest.json and/or hashmanifest.json to ensure authenticity. Requires key management and signature verification. 
   Controlled via ProgramOptions. CLI flags to be added later.
 - Improve progress display by adapting to total job size.
