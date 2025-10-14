@@ -211,6 +211,37 @@ PLANNED v0.4 / DONE
 
 PLANNED v0.4 / NEXT
 - Remote/cloud targets SCP/SSH
+	Add SCP-related options to ProgramOptions:
+		--scp-enabled
+		--scp-host
+		--scp-port
+		--scp-user
+		--scp-keyfile
+		--scp-target-folder
+		--scp-delete-after-upload
+		--scp-retry-count
+		--scp-retry-delay-seconds
+		TODO for future: --scp-password (optional, low-priority)
+
+	Implement ScpUploader class:
+		Handles file transfers one by one
+		Creates remote directory structure as needed
+		Retries on failure with delay
+		Logs success/failure for each file
+		Deletes local file only after successful upload if --scp-delete-after-upload is set
+
+	Integrate into backup flow:
+		Run upload process in background during backup
+		Only upload chunk and compressed files (skip .json files)
+		Ensure files are only uploaded once they are fully written
+		On fatal error, terminate upload and halt backup
+
+	Assume working SSH setup (pre-existing access)
+		No automatic connection setup in this version
+		Add TODO for future SSH key management and connection verification
+
+	Add TODO for future resumption support
+		Track uploaded files (possibly in temporary state file)
 - Refactor task, I need to go through che code to see if there are any quick fixes or improvements that can be made.
 
 

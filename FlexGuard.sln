@@ -31,6 +31,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Images", "Images", "{08C31E
 		Images\ChatGPT Image 28. jul. 2025, 23.41.03.png = Images\ChatGPT Image 28. jul. 2025, 23.41.03.png
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlexGuard.Data", "FlexGuard.Data\FlexGuard.Data.csproj", "{86D57A8F-3296-49F7-918E-4D4AE1FE5849}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "POC", "POC\POC.csproj", "{1CD595FF-8133-4AEF-B354-BCF92D528247}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +61,14 @@ Global
 		{449A06A7-F84E-47F4-8CEA-D8859FB1B698}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{449A06A7-F84E-47F4-8CEA-D8859FB1B698}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{449A06A7-F84E-47F4-8CEA-D8859FB1B698}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86D57A8F-3296-49F7-918E-4D4AE1FE5849}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86D57A8F-3296-49F7-918E-4D4AE1FE5849}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86D57A8F-3296-49F7-918E-4D4AE1FE5849}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86D57A8F-3296-49F7-918E-4D4AE1FE5849}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CD595FF-8133-4AEF-B354-BCF92D528247}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CD595FF-8133-4AEF-B354-BCF92D528247}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CD595FF-8133-4AEF-B354-BCF92D528247}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CD595FF-8133-4AEF-B354-BCF92D528247}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
