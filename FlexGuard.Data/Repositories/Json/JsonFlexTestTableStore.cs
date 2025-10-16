@@ -34,7 +34,42 @@ public sealed class JsonFlexTestTableStore : IFlexTestTableStore
         }
         finally { _gate.Release(); }
     }
+    public async Task InsertAsync(FlexTestRow row, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(row.TestNavn) || row.TestNavn.Length > DomainLimits.TestNavnMax)
+            throw new ArgumentException($"'{nameof(row.TestNavn)}' must be ≤ {DomainLimits.TestNavnMax} characters.", nameof(row));
 
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var list = (await ReadAsync(ct)).ToList();
+            if (list.Any(r => r.Id == row.Id))
+                throw new InvalidOperationException($"Row with Id={row.Id} already exists.");
+
+            list.Add(row);
+            await WriteAtomicAsync(list, ct);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task UpdateAsync(FlexTestRow row, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(row.TestNavn) || row.TestNavn.Length > DomainLimits.TestNavnMax)
+            throw new ArgumentException($"'{nameof(row.TestNavn)}' must be ≤ {DomainLimits.TestNavnMax} characters.", nameof(row));
+
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var list = (await ReadAsync(ct)).ToList();
+            var idx = list.FindIndex(r => r.Id == row.Id);
+            if (idx < 0)
+                throw new InvalidOperationException($"Row with Id={row.Id} was not found.");
+
+            list[idx] = row;
+            await WriteAtomicAsync(list, ct);
+        }
+        finally { _gate.Release(); }
+    }
     public async Task UpsertAsync(FlexTestRow row, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(row.TestNavn) || row.TestNavn.Length > DomainLimits.TestNavnMax)
