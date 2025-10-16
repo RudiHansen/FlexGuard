@@ -72,20 +72,6 @@ public sealed class SqliteFlexTestTableStore : IFlexTestTableStore
         if (affected == 0)
             throw new InvalidOperationException($"Row with Id={row.Id} was not found.");
     }
-    public async Task UpsertAsync(FlexTestRow row, CancellationToken ct = default)
-    {
-        if (string.IsNullOrEmpty(row.TestNavn) || row.TestNavn.Length > DomainLimits.TestNavnMax)
-            throw new ArgumentException($"'{nameof(row.TestNavn)}' must be ≤ {DomainLimits.TestNavnMax} characters.", nameof(row));
-
-        await EnsureSchemaAsync(ct);
-        using var conn = await OpenAsync(ct);
-        var sql = """
-            INSERT INTO FlexTestTable (Id, TestNavn)
-            VALUES (@Id, @TestNavn)
-            ON CONFLICT(Id) DO UPDATE SET TestNavn = excluded.TestNavn;
-            """;
-        await conn.ExecuteAsync(new CommandDefinition(sql, row, cancellationToken: ct));
-    }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {

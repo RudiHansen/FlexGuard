@@ -14,23 +14,22 @@ namespace POC
             var dbPath = Path.Combine(appData, "FlexGuard", "FlexTest.db");
 
             var services = new ServiceCollection();
-            //services.AddFlexGuardData(o => {
-            //    o.Backend = Backend.Sqlite;
-            //    o.SqlitePath = Path.Combine(appData, "FlexGuard", "FlexTest.db");
-            //});
             services.AddFlexGuardData(o =>
             {
-                o.Backend = Backend.Json;
-                o.JsonPath = Path.Combine(appData, "FlexGuard", "FlexTestTable.json");
+                //o.Backend = Backend.Json;
+                //o.JsonPath = Path.Combine(appData, "FlexGuard", "FlexTestTable.json");
+                o.Backend = Backend.Sqlite;
+                o.SqlitePath = Path.Combine(appData, "FlexGuard", "FlexTest.db");
             });
+
             var provider = services.BuildServiceProvider();
 
             // Hent store
             var store = provider.GetRequiredService<IFlexTestTableStore>();
 
             // 1) Upsert
-            await store.UpsertAsync(new FlexTestRow { Id = 1, TestNavn = "Hej verden" });
-            await store.UpsertAsync(new FlexTestRow { Id = 2, TestNavn = "Demo" });
+            await store.InsertAsync(new FlexTestRow { Id = 1, TestNavn = "Hej verden" });
+            await store.InsertAsync(new FlexTestRow { Id = 2, TestNavn = "Demo" });
 
             // 2) GetAll
             var all = await store.GetAllAsync();
@@ -42,8 +41,8 @@ namespace POC
             Console.WriteLine($"GetById(1) -> {(one is null ? "null" : one.TestNavn)}");
 
             // 4) Update (Upsert igen)
-            await store.UpsertAsync(new FlexTestRow { Id = 1, TestNavn = "Opdateret tekst" });
-            await store.UpsertAsync(new FlexTestRow { Id = 4, TestNavn = "Task4" });
+            await store.UpdateAsync(new FlexTestRow { Id = 1, TestNavn = "Opdateret tekst" });
+            await store.InsertAsync(new FlexTestRow { Id = 4, TestNavn = "Task4" });
 
             // 5) Delete
             await store.DeleteAsync(2);

@@ -70,23 +70,6 @@ public sealed class JsonFlexTestTableStore : IFlexTestTableStore
         }
         finally { _gate.Release(); }
     }
-    public async Task UpsertAsync(FlexTestRow row, CancellationToken ct = default)
-    {
-        if (string.IsNullOrEmpty(row.TestNavn) || row.TestNavn.Length > DomainLimits.TestNavnMax)
-            throw new ArgumentException(
-                $"'{nameof(row.TestNavn)}' must be ≤ {DomainLimits.TestNavnMax} characters.",
-                nameof(row));
-
-        await _gate.WaitAsync(ct);
-        try
-        {
-            var list = (await ReadAsync(ct)).ToList();
-            var idx = list.FindIndex(r => r.Id == row.Id);
-            if (idx >= 0) list[idx] = row; else list.Add(row);
-            await WriteAtomicAsync(list, ct);
-        }
-        finally { _gate.Release(); }
-    }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
