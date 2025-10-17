@@ -21,7 +21,7 @@ namespace POC
             foreach (var r in all) Console.WriteLine($"{r.Id}: {r.TestNavn} ({r.Type}, {r.Pris})");
 
             // Vælg én og opdatér
-            var first = all.First();
+            var first = all[0];
             await store.UpdateAsync(new FlexTestRow { Id = first.Id, TestNavn = "Opdateret tekst", Pris = 1.5m, Type = TestType.Medium });
 
             // Insert endnu én
