@@ -16,10 +16,10 @@ namespace POC
             var services = new ServiceCollection();
             services.AddFlexGuardData(o =>
             {
-                o.Backend = Backend.Json;
-                o.JsonPath = Path.Combine(appData, "FlexGuard", "FlexTestTable.json");
-                //o.Backend = Backend.Sqlite;
-                //o.SqlitePath = Path.Combine(appData, "FlexGuard", "FlexTest.db");
+                //o.Backend = Backend.Json;
+                //o.JsonPath = Path.Combine(appData, "FlexGuard", "FlexTestTable.json");
+                o.Backend = Backend.Sqlite;
+                o.SqlitePath = Path.Combine(appData, "FlexGuard", "FlexTest.db");
             });
 
             var provider = services.BuildServiceProvider();
@@ -27,30 +27,43 @@ namespace POC
             // Hent store
             var store = provider.GetRequiredService<IFlexTestTableStore>();
 
-            // 1) Upsert
-            await store.InsertAsync(new FlexTestRow { Id = 1, TestNavn = "Hej verden", Pris = 5.5m, Type = TestType.Medium });
-            await store.InsertAsync(new FlexTestRow { Id = 2, TestNavn = "Demo", Pris = 7.5m, Type = TestType.Normal });
+            // Insert new records
+            await store.InsertAsync(new FlexTestRow { TestNavn = "Hej verden", Pris = 5.5m, Type = TestType.Medium });
+            await store.InsertAsync(new FlexTestRow { TestNavn = "Demo", Pris = 7.5m, Type = TestType.Normal });
 
-            // 2) GetAll
+            // GetAll
+            string savedId = "";
             var all = await store.GetAllAsync();
             Console.WriteLine($"Rows after insert: {all.Count}");
-            foreach (var r in all) Console.WriteLine($"{r.Id}: {r.TestNavn}");
+            foreach (var r in all)
+            {
+                Console.WriteLine($"{r.Id}: {r.TestNavn}");
+                savedId = r.Id;
+            }
 
-            // 3) GetById
-            var one = await store.GetByIdAsync(1);
-            Console.WriteLine($"GetById(1) -> {(one is null ? "null" : one.TestNavn)}");
+            // GetById
+            var one = await store.GetByIdAsync(savedId);
+            Console.WriteLine($"GetById({savedId}) -> {(one is null ? "null" : one.TestNavn)}");
 
-            // 4) Update (Upsert igen)
-            await store.UpdateAsync(new FlexTestRow { Id = 1, TestNavn = "Opdateret tekst", Pris = 1.5m, Type = TestType.Medium });
-            await store.InsertAsync(new FlexTestRow { Id = 4, TestNavn = "Task4", Pris = 2.5m, Type = TestType.Medium });
+            //Update One record and Insert another
+            await store.UpdateAsync(new FlexTestRow { Id = savedId, TestNavn = "Opdateret tekst", Pris = 1.5m, Type = TestType.Medium });
+            await store.InsertAsync(new FlexTestRow { TestNavn = "Task4", Pris = 2.5m, Type = TestType.Medium });
 
-            // 5) Delete
-            await store.DeleteAsync(2);
-
-            // 6) Vis slutresultat
+            // Show updated list
             var finalRows = await store.GetAllAsync();
-            Console.WriteLine($"Rows after update/delete: {finalRows.Count}");
+            Console.WriteLine($"Rows after update/insert: {finalRows.Count}");
             foreach (var r in finalRows) Console.WriteLine($"{r.Id}: {r.TestNavn}");
+
+            // Delete one record
+            await store.DeleteAsync(savedId);
+
+            // Vis slutresultat
+            finalRows = await store.GetAllAsync();
+            Console.WriteLine($"Rows after delete: {finalRows.Count}");
+            foreach (var r in finalRows)
+            {
+                Console.WriteLine($"{r.Id}: {r.TestNavn}");
+            }
 
             Console.WriteLine("Done. JSON path:");
             Console.WriteLine(Path.Combine(

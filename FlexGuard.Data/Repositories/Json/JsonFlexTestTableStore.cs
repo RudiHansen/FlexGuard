@@ -24,7 +24,7 @@ public sealed class JsonFlexTestTableStore : IFlexTestTableStore
         finally { _gate.Release(); }
     }
 
-    public async Task<FlexTestRow?> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<FlexTestRow?> GetByIdAsync(string id, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
         try
@@ -71,7 +71,7 @@ public sealed class JsonFlexTestTableStore : IFlexTestTableStore
         finally { _gate.Release(); }
     }
 
-    public async Task DeleteAsync(int id, CancellationToken ct = default)
+    public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
         try

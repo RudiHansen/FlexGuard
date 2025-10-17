@@ -34,7 +34,7 @@ public sealed class SqliteFlexTestTableStore : IFlexTestTableStore
         return rows.ToList();
     }
 
-    public async Task<FlexTestRow?> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<FlexTestRow?> GetByIdAsync(string id, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         using var conn = await OpenAsync(ct);
@@ -79,7 +79,7 @@ public sealed class SqliteFlexTestTableStore : IFlexTestTableStore
             throw new InvalidOperationException($"Row with Id={row.Id} was not found.");
     }
 
-    public async Task DeleteAsync(int id, CancellationToken ct = default)
+    public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         using var conn = await OpenAsync(ct);
@@ -96,7 +96,7 @@ public sealed class SqliteFlexTestTableStore : IFlexTestTableStore
 
         var ddl = """
         CREATE TABLE IF NOT EXISTS FlexTestTable (
-          Id        INTEGER PRIMARY KEY,
+          Id        TEXT    NOT NULL PRIMARY KEY,
           TestNavn  TEXT    NOT NULL CHECK(length(TestNavn) <= 20),
           Pris      NUMERIC NOT NULL DEFAULT 0,   -- decimal maps fint til NUMERIC i SQLite
           Type      INTEGER NOT NULL DEFAULT 0    -- enum TestType (0=None)

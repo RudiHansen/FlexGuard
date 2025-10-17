@@ -1,8 +1,10 @@
-﻿namespace FlexGuard.Core.Models
+﻿using NUlid;
+
+namespace FlexGuard.Core.Models
 {
     public sealed class FlexTestRow
     {
-        public int Id { get; init; }
+        public string Id { get; init; } = Ulid.NewUlid().ToString(); // 26-tegns ULID
         public required string TestNavn { get; init; }
         public decimal Pris { get; init; }
         public TestType Type { get; init; } = TestType.None;

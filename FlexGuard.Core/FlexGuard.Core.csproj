@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="NUlid" Version="1.7.3" />
     <PackageReference Include="System.Windows.Extensions" Version="9.0.7" />
     <PackageReference Include="ZstdSharp.Port" Version="0.8.6" />
   </ItemGroup>
