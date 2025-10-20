@@ -48,7 +48,7 @@ namespace FlexGuard.Core.Profiling
                 ? DateTime.UtcNow - _globalStartTime.Value
                 : TimeSpan.Zero;
         }
-        public PerformanceScope TrackSection(string name) => new(name);
+        public static PerformanceScope TrackSection(string name) => new(name);
 
         public void Log(object data)
         {

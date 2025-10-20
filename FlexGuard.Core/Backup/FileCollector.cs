@@ -13,7 +13,7 @@ public static class FileCollector
     DateTime? lastBackupTime = null)
     {
         var entries = new List<PendingFileEntry>();
-        using (var scope = PerformanceTracker.Instance.TrackSection("Collect Files"))
+        using (var scope = PerformanceTracker.TrackSection("Collect Files"))
         {
             foreach (var source in config.Sources)
             {

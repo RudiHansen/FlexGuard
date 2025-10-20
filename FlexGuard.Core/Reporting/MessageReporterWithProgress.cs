@@ -5,7 +5,7 @@ public class MessageReporterWithProgress : IMessageReporter
     private readonly IMessageReporter _base;
     private readonly Action<long, long, string> _progressCallback;
     private long _currentBytes = 0;
-    private long _totalBytes;
+    private readonly long _totalBytes;
 
     public MessageReporterWithProgress(IMessageReporter baseReporter, long totalBytes, Action<long, long, string> progressCallback)
     {

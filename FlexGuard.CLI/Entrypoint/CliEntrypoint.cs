@@ -12,7 +12,7 @@ public static class CliEntrypoint
 {
     public static void Run(string[] args)
     {
-        using var scope = PerformanceTracker.Instance.TrackSection("Main");
+        using var scope = PerformanceTracker.TrackSection("Main");
         var reporter = new MessageReporterConsole(debugToConsole: false, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 

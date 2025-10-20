@@ -17,7 +17,7 @@ public static class FileGrouper
 
         // Group files by GroupType
         var groupedByType = files.GroupBy(f => f.GroupType);
-        using (var scope = PerformanceTracker.Instance.TrackSection("Group Files"))
+        using (var scope = PerformanceTracker.TrackSection("Group Files"))
         {
             foreach (var typeGroup in groupedByType)
             {

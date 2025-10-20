@@ -32,45 +32,43 @@ public static class ChunkProcessor
 
         try
         {
-            using (var scope = PerformanceTracker.Instance.TrackSection("Creating Chunk"))
+            using (var scope = PerformanceTracker.TrackSection("Creating Chunk"))
             {
                 scope.Set("chunkIndex", group.Index);
-                using (var zipFileStream = new FileStream(tempZipPath, FileMode.Create, FileAccess.Write))
-                using (var archive = new ZipArchive(zipFileStream, ZipArchiveMode.Create, leaveOpen: false))
+                using var zipFileStream = new FileStream(tempZipPath, FileMode.Create, FileAccess.Write);
+                using var archive = new ZipArchive(zipFileStream, ZipArchiveMode.Create, leaveOpen: false);
+                foreach (var file in group.Files)
                 {
-                    foreach (var file in group.Files)
+                    try
                     {
-                        try
+                        using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                        // Compute hash directly from stream
+                        string hash = HashHelper.ComputeHash(sourceStream);
+
+                        var entry = archive.CreateEntry(file.RelativePath, zipCompressionLevel);
+                        using var entryStream = entry.Open();
+                        sourceStream.CopyTo(entryStream);
+
+                        fileManifestBuilder.AddFile(new FileEntry
                         {
-                            using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                            // Compute hash directly from stream
-                            string hash = HashHelper.ComputeHash(sourceStream);
-
-                            var entry = archive.CreateEntry(file.RelativePath, zipCompressionLevel);
-                            using var entryStream = entry.Open();
-                            sourceStream.CopyTo(entryStream);
-
-                            fileManifestBuilder.AddFile(new FileEntry
-                            {
-                                RelativePath = file.RelativePath,
-                                Hash = hash,
-                                ChunkFile = chunkFileName,
-                                FileSize = file.FileSize,
-                                LastWriteTimeUtc = file.LastWriteTimeUtc,
-                                CompressionSkipped = (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible),
-                                CompressionRatio = 0
-                            });
-                            reporter.ReportProgress(file.FileSize, file.RelativePath);
-                        }
-                        catch (Exception ex)
-                        {
-                            reporter.Warning($"Failed to add file '{file.SourcePath}': {ex.Message}");
-                        }
+                            RelativePath = file.RelativePath,
+                            Hash = hash,
+                            ChunkFile = chunkFileName,
+                            FileSize = file.FileSize,
+                            LastWriteTimeUtc = file.LastWriteTimeUtc,
+                            CompressionSkipped = (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible),
+                            CompressionRatio = 0
+                        });
+                        reporter.ReportProgress(file.FileSize, file.RelativePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        reporter.Warning($"Failed to add file '{file.SourcePath}': {ex.Message}");
                     }
                 }
             }
-            using (var scope = PerformanceTracker.Instance.TrackSection("Compress Chunk"))
+            using (var scope = PerformanceTracker.TrackSection("Compress Chunk"))
             {
                 scope.Set("chunkIndex", group.Index);
                 scope.Set("chunkType", group.GroupType.ToString());
