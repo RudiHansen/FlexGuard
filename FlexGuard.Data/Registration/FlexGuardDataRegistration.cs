@@ -44,6 +44,25 @@ namespace FlexGuard.Data.Registration
                         services.AddSingleton<INewFileManifestEntryStore>(_ =>
                             new JsonNewFileManifestEntryStore(opts.JsonManifestEntryPath!));
 
+                        // NEW backup stores
+                        if (string.IsNullOrWhiteSpace(opts.JsonBackupEntryPath))
+                            throw new InvalidOperationException("JsonBackupEntryPath must be set when Backend=Json.");
+                        EnsureDir(opts.JsonBackupEntryPath!);
+                        services.AddSingleton<IFlexBackupEntryStore>(_ =>
+                            new JsonFlexBackupEntryStore(opts.JsonBackupEntryPath!));
+
+                        if (string.IsNullOrWhiteSpace(opts.JsonBackupChunkEntryPath))
+                            throw new InvalidOperationException("JsonBackupChunkEntryPath must be set when Backend=Json.");
+                        EnsureDir(opts.JsonBackupChunkEntryPath!);
+                        services.AddSingleton<IFlexBackupChunkEntryStore>(_ =>
+                            new JsonFlexBackupChunkEntryStore(opts.JsonBackupChunkEntryPath!));
+
+                        if (string.IsNullOrWhiteSpace(opts.JsonBackupFileEntryPath))
+                            throw new InvalidOperationException("JsonBackupFileEntryPath must be set when Backend=Json.");
+                        EnsureDir(opts.JsonBackupFileEntryPath!);
+                        services.AddSingleton<IFlexBackupFileEntryStore>(_ =>
+                            new JsonFlexBackupFileEntryStore(opts.JsonBackupFileEntryPath!));
+
                         break;
                     }
 
@@ -60,6 +79,13 @@ namespace FlexGuard.Data.Registration
                             new SqliteNewFileManifestStore(opts.SqlitePath!));
                         services.AddSingleton<INewFileManifestEntryStore>(_ =>
                             new SqliteNewFileManifestEntryStore(opts.SqlitePath!));
+                        // NEW backup stores
+                        services.AddSingleton<IFlexBackupEntryStore>(_ =>
+                            new SqliteFlexBackupEntryStore(opts.SqlitePath!));
+                        services.AddSingleton<IFlexBackupChunkEntryStore>(_ =>
+                            new SqliteFlexBackupChunkEntryStore(opts.SqlitePath!));
+                        services.AddSingleton<IFlexBackupFileEntryStore>(_ =>
+                            new SqliteFlexBackupFileEntryStore(opts.SqlitePath!));
                         break;
                     }
 

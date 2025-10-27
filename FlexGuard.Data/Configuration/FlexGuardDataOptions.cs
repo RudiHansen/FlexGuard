@@ -8,6 +8,11 @@ public sealed class FlexGuardDataOptions
     public string? JsonManifestPath { get; set; }        // NewFileManifest.json
     public string? JsonManifestEntryPath { get; set; }   // NewFileManifestEntry.json
 
+    // NEW: backup-related JSON paths
+    public string? JsonBackupEntryPath { get; set; }
+    public string? JsonBackupChunkEntryPath { get; set; }
+    public string? JsonBackupFileEntryPath { get; set; }
+
     // SQLite-backend
     public string? SqlitePath { get; set; } // fx %AppData%/FlexGuard/FlexTest.db
 
