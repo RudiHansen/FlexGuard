@@ -27,6 +27,7 @@ namespace FlexGuard.Core.Recording
 
         // --- Current run state ---
         private string? _currentBackupEntryId;
+        private FlexBackupEntry? _currentBackupEntry;
         private DateTime _runStartUtc;
 
         // Totals accumulated across the entire run
@@ -81,39 +82,26 @@ namespace FlexGuard.Core.Recording
             if (Interlocked.Exchange(ref _runActiveFlag, 1) == 1)
                 throw new InvalidOperationException("A backup run is already active in this process.");
 
-            _currentBackupEntryId = Ulid.NewUlid().ToString(); // string(26)
             _runStartUtc = DateTime.UtcNow;
-
             _totalFiles = 0;
             _totalChunks = 0;
             _totalUncompressedBytes = 0;
             _totalCompressedBytes = 0;
+
             _chunkScratch.Clear();
 
             // Create initial FlexBackupEntry row with basic info.
             var entry = new FlexBackupEntry
             {
-                BackupEntryId = _currentBackupEntryId,
                 JobName = jobName,
                 OperationMode = mode,
                 CompressionMethod = compressionMethod,
-                // If you have a HashAlgorithm column, set it here.
-                // HashAlgorithm     = hashAlgorithm,
-
                 StartDateTimeUtc = _runStartUtc,
-                EndDateTimeUtc = null, // not finished yet
-                RunTimeMs = 0,
-
-                TotalFiles = 0,
-                TotalGroups = 0, // a.k.a. chunk count
-                TotalBytes = 0,
-                TotalBytesCompressed = 0,
-                CompressionRatio = 0,
-
-                // You may add fields like Status = "Running", ErrorMessage = null, etc.
             };
+            _currentBackupEntryId = entry.BackupEntryId;
 
             await _backupEntryStore.InsertAsync(entry, cancellationToken).ConfigureAwait(false);
+            _currentBackupEntry = entry;
 
             return _currentBackupEntryId;
         }
@@ -322,7 +310,7 @@ namespace FlexGuard.Core.Recording
         /// You can also pass status / error info here if you add those columns.
         /// </summary>
         public async Task CompleteRunAsync(
-            string status = "Completed",
+            RunStatus status = RunStatus.Completed,
             string? errorMessage = null,
             CancellationToken cancellationToken = default)
         {
@@ -335,38 +323,33 @@ namespace FlexGuard.Core.Recording
             var totalBytes = _totalUncompressedBytes;
             var totalCompressed = _totalCompressedBytes;
             double ratio = 0;
-            if (totalBytes > 0 && totalCompressed > 0)
+            if (totalBytes > 0)
             {
                 ratio = (double)totalCompressed / totalBytes;
             }
 
-            var finalRow = new FlexBackupEntry
+            if (_currentBackupEntry == null)
             {
-                BackupEntryId = _currentBackupEntryId!,
-                JobName = "", // Placeholder
-                // We assume these don't change: JobName, etc.
-                // If your UpdateAsync only updates changed columns, you're good.
-                // If it overwrites the full row, you'll need to re-fill immutable fields here.
+                throw new InvalidOperationException("No active backup run. CompleteRunAsync() was called without a matching StartRunAsync().");
+            }
 
-                StartDateTimeUtc = _runStartUtc,
-                EndDateTimeUtc = endUtc,
-                RunTimeMs = runTime.Milliseconds,
+            _currentBackupEntry.EndDateTimeUtc = endUtc;
+            _currentBackupEntry.RunTimeMs = (long)runTime.TotalMilliseconds;
 
-                TotalFiles = _totalFiles,
-                TotalGroups = _totalChunks,
-                TotalBytes = totalBytes,
-                TotalBytesCompressed = totalCompressed,
-                CompressionRatio = ratio,
+            _currentBackupEntry.Status = status;
+            _currentBackupEntry.StatusMessage = errorMessage;
 
-                // Optional future columns:
-                // Status          = status,
-                // ErrorMessage    = errorMessage
-            };
+            _currentBackupEntry.TotalFiles = _totalFiles;
+            _currentBackupEntry.TotalChunks = _totalChunks;
+            _currentBackupEntry.TotalBytes = totalBytes;
+            _currentBackupEntry.TotalBytesCompressed = totalCompressed;
+            _currentBackupEntry.CompressionRatio = ratio;
 
-            await _backupEntryStore.UpdateAsync(finalRow, cancellationToken).ConfigureAwait(false);
+            await _backupEntryStore.UpdateAsync(_currentBackupEntry, cancellationToken).ConfigureAwait(false);
 
             // Mark run inactive
             _currentBackupEntryId = null;
+            _currentBackupEntry = null;
             Interlocked.Exchange(ref _runActiveFlag, 0);
 
             // Clear scratch just in case

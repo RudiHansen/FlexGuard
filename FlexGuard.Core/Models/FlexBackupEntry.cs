@@ -12,21 +12,21 @@ namespace FlexGuard.Core.Models
         public required string JobName { get; init; }
         public OperationMode OperationMode { get; init; } = OperationMode.Unknown;
         public CompressionMethod CompressionMethod { get; init; } = CompressionMethod.None;
-        public RunStatus Status { get; init; } = RunStatus.Running;
-        public string? StatusMessage { get; init; }
+        public RunStatus Status { get; set; } = RunStatus.Running;
+        public string? StatusMessage { get; set; }
         // UTC timestamps
         public required DateTimeOffset StartDateTimeUtc { get; init; }
-        public DateTimeOffset? EndDateTimeUtc { get; init; }
+        public DateTimeOffset? EndDateTimeUtc { get; set; }
         /// <summary>Total runtime in milliseconds for the job.</summary>
-        public long RunTimeMs { get; init; }
+        public long RunTimeMs { get; set; }
         // Aggregates
-        public long TotalFiles { get; init; }
-        public long TotalGroups { get; init; }
-        public long TotalBytes { get; init; }
-        public long TotalBytesCompressed { get; init; }
+        public long TotalFiles { get; set; }
+        public long TotalChunks { get; set; }
+        public long TotalBytes { get; set; }
+        public long TotalBytesCompressed { get; set; }
         /// <summary>
         /// Compression ratio (compressed/original). e.g. 0.42 = 42%.
         /// </summary>
-        public double CompressionRatio { get; init; }
+        public double CompressionRatio { get; set; }
     }
 }
