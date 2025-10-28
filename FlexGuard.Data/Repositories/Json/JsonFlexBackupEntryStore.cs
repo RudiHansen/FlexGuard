@@ -83,7 +83,7 @@ namespace FlexGuard.Data.Repositories.Json
             if (e.StatusMessage is { Length: > FlexBackupLimits.StatusMessageMax })
                 throw new ArgumentException($"StatusMessage must be ≤ {FlexBackupLimits.StatusMessageMax} chars.", nameof(e));
 
-            if (e.TotalFiles < 0 || e.TotalGroups < 0 || e.TotalBytes < 0 || e.TotalBytesCompressed < 0)
+            if (e.TotalFiles < 0 || e.TotalChunks < 0 || e.TotalBytes < 0 || e.TotalBytesCompressed < 0)
                 throw new ArgumentOutOfRangeException(nameof(e), "Totals must be >= 0.");
 
             if (e.RunTimeMs < 0)
