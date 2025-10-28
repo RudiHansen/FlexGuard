@@ -1,6 +1,6 @@
-﻿using FlexGuard.Core.Abstractions;
+﻿using NUlid;
+using FlexGuard.Core.Abstractions;
 using FlexGuard.Core.Models;
-using NUlid;
 using System.Collections.Concurrent;
 
 namespace FlexGuard.Core.Recording
@@ -152,6 +152,7 @@ namespace FlexGuard.Core.Recording
         /// </summary>
         public async Task<string> StartChunkAsync(string chunkFileName,CompressionMethod compressionMethod,int chunkIndex,CancellationToken cancellationToken = default)
         {
+            //TODO: Metoden er ikke færdig endnu, skal gennemgås før den bruges.
             EnsureRunActive();
 
             var chunkEntryId = Ulid.NewUlid().ToString();
@@ -206,6 +207,7 @@ namespace FlexGuard.Core.Recording
         /// </summary>
         public async Task CompleteChunkAsync(string chunkEntryId, string chunkHash, long finalCompressedSizeBytes, TimeSpan createTime, TimeSpan compressTime, CancellationToken cancellationToken = default)
         {
+            //TODO: Metoden er ikke færdig endnu, skal gennemgås før den bruges.
             EnsureRunActive();
 
             var endUtc = DateTime.UtcNow;
@@ -267,6 +269,7 @@ namespace FlexGuard.Core.Recording
         /// </summary>
         public async Task RecordFileAsync(string chunkEntryId,string relativePath,string fileHash,long originalFileSizeBytes,long? compressedFileSizeBytes,DateTime lastWriteTimeUtc,DateTime fileProcessStartUtc,DateTime fileProcessEndUtc,CancellationToken cancellationToken = default)
         {
+            //TODO: Metoden er ikke færdig endnu, skal gennemgås før den bruges.
             EnsureRunActive();
 
             var fileEntryId = Ulid.NewUlid().ToString();
