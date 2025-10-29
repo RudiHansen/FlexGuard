@@ -29,6 +29,7 @@ namespace FlexGuard.Core.Models
         public string ChunkHash { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public long FileSizeCompressed { get; set; }
+        public long FileCount { get; set; }
         /// <summary>CPU time consumed for this chunk, in ms.</summary>
         public long CpuTimeMs { get; set; }
         /// <summary>Average CPU usage (%) during work, e.g. 73.2.</summary>
