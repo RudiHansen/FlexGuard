@@ -1,5 +1,4 @@
-﻿using NUlid;
-using FlexGuard.Core.Abstractions;
+﻿using FlexGuard.Core.Abstractions;
 using FlexGuard.Core.Models;
 using System.Collections.Concurrent;
 
@@ -28,7 +27,7 @@ namespace FlexGuard.Core.Recording
         // --- Current run state ---
         private string? _currentBackupEntryId;
         private FlexBackupEntry? _currentBackupEntry;
-        private DateTime _runStartUtc;
+        private DateTimeOffset _runStartUtc;
 
         // Totals accumulated across the entire run
         private long _totalFiles;
@@ -44,7 +43,7 @@ namespace FlexGuard.Core.Recording
 
         private class ChunkScratchInfo
         {
-            public DateTime StartUtc { get; set; }
+            public DateTimeOffset StartUtc { get; set; }
             public string ChunkFileName { get; set; } = string.Empty;
             public CompressionMethod CompressionMethod { get; set; }
 
@@ -74,7 +73,7 @@ namespace FlexGuard.Core.Recording
             if (Interlocked.Exchange(ref _runActiveFlag, 1) == 1)
                 throw new InvalidOperationException("A backup run is already active in this process.");
 
-            _runStartUtc = DateTime.UtcNow;
+            _runStartUtc = DateTimeOffset.UtcNow;
             _totalFiles = 0;
             _totalChunks = 0;
             _totalUncompressedBytes = 0;
@@ -106,7 +105,7 @@ namespace FlexGuard.Core.Recording
         {
             EnsureRunActive();
 
-            var endUtc = DateTime.UtcNow;
+            DateTimeOffset endUtc = DateTimeOffset.UtcNow;
             var runTime = endUtc - _runStartUtc;
             if (runTime < TimeSpan.Zero) runTime = TimeSpan.Zero;
 
@@ -154,7 +153,7 @@ namespace FlexGuard.Core.Recording
         {
             EnsureRunActive();
 
-            var startUtc = DateTime.UtcNow;
+            DateTimeOffset startUtc = DateTimeOffset.UtcNow;
 
             Interlocked.Increment(ref _totalChunks);
 
@@ -188,7 +187,7 @@ namespace FlexGuard.Core.Recording
         {
             EnsureRunActive();
 
-            var endUtc = DateTime.UtcNow;
+            DateTimeOffset endUtc = DateTimeOffset.UtcNow;
 
             if (!_chunkScratch.TryGetValue(chunkEntryId, out var scratch))
             {
@@ -232,7 +231,7 @@ namespace FlexGuard.Core.Recording
         /// Record that we processed a file into a given chunk.
         /// Creates a FlexBackupFileEntry row and updates in-memory totals.
         /// </summary>
-        public async Task RecordFileAsync(string chunkEntryId,string relativePath,string fileHash,long originalFileSizeBytes,long? compressedFileSizeBytes,DateTime lastWriteTimeUtc,DateTime fileProcessStartUtc,DateTime fileProcessEndUtc,CancellationToken cancellationToken = default)
+        public async Task RecordFileAsync(string chunkEntryId,string relativePath,string fileHash,long originalFileSizeBytes,long? compressedFileSizeBytes, DateTimeOffset lastWriteTimeUtc, DateTimeOffset fileProcessStartUtc, DateTimeOffset fileProcessEndUtc,CancellationToken cancellationToken = default)
         {
             EnsureRunActive();
 
