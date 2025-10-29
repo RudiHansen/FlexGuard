@@ -69,7 +69,7 @@ namespace FlexGuard.Core.Recording
         /// Creates a FlexBackupEntry row and initializes in-memory totals.
         /// Assumes there is no active run.
         /// </summary>
-        public async Task<string> StartRunAsync(string jobName,OperationMode mode,CompressionMethod compressionMethod,string hashAlgorithm = "SHA256",CancellationToken cancellationToken = default)
+        public async Task<string> StartRunAsync(string jobName,OperationMode mode,CompressionMethod compressionMethod,CancellationToken cancellationToken = default)
         {
             if (Interlocked.Exchange(ref _runActiveFlag, 1) == 1)
                 throw new InvalidOperationException("A backup run is already active in this process.");
@@ -152,54 +152,33 @@ namespace FlexGuard.Core.Recording
         /// </summary>
         public async Task<string> StartChunkAsync(string chunkFileName,CompressionMethod compressionMethod,int chunkIndex,CancellationToken cancellationToken = default)
         {
-            //TODO: Metoden er ikke færdig endnu, skal gennemgås før den bruges.
             EnsureRunActive();
 
-            var chunkEntryId = Ulid.NewUlid().ToString();
             var startUtc = DateTime.UtcNow;
-
-            // Track scratch info for accumulation and later completion.
-            _chunkScratch[chunkEntryId] = new ChunkScratchInfo
-            {
-                StartUtc = startUtc,
-                ChunkFileName = chunkFileName,
-                CompressionMethod = compressionMethod,
-                FileCount = 0,
-                UncompressedBytes = 0,
-                CompressedBytes = 0
-            };
 
             Interlocked.Increment(ref _totalChunks);
 
             var chunkRow = new FlexBackupChunkEntry
             {
-                ChunkEntryId = chunkEntryId,
+                ChunkIdx = chunkIndex,
+                ChunkFileName = chunkFileName,
                 BackupEntryId = _currentBackupEntryId!,
                 CompressionMethod = compressionMethod,
-
                 StartDateTimeUtc = startUtc,
-                EndDateTimeUtc = null,
-                RunTimeMs = 0,
-                CreateTimeMs = 0,
-                CompressTimeMs = 0,
-
-                ChunkFileName = chunkFileName,
-                ChunkHash = "", // will be known at completion
-                FileSize = 0,    // will fill in CompleteChunk
-                FileSizeCompressed = 0,    // will fill in CompleteChunk
-
-                CpuTimeMs = 0,
-                CpuPercent = 0,
-                MemoryStart = 0,
-                MemoryEnd = 0,
-
-                // If you keep ChunkIndex in DB, add it here:
-                // ChunkIndex = chunkIndex,
             };
 
             await _chunkEntryStore.InsertAsync(chunkRow, cancellationToken).ConfigureAwait(false);
 
-            return chunkEntryId;
+            // Track scratch info for accumulation and later completion.
+            // TODO: I am still not sure that I need _chunkScratch, but will deside later. (Remember to clean it up on CompleteChunkAsync)
+            _chunkScratch[chunkRow.ChunkEntryId] = new ChunkScratchInfo
+            {
+                StartUtc = startUtc,
+                ChunkFileName = chunkFileName,
+                CompressionMethod = compressionMethod,
+            };
+
+            return chunkRow.ChunkEntryId;
         }
 
         /// <summary>
@@ -207,57 +186,42 @@ namespace FlexGuard.Core.Recording
         /// </summary>
         public async Task CompleteChunkAsync(string chunkEntryId, string chunkHash, long finalCompressedSizeBytes, TimeSpan createTime, TimeSpan compressTime, CancellationToken cancellationToken = default)
         {
-            //TODO: Metoden er ikke færdig endnu, skal gennemgås før den bruges.
             EnsureRunActive();
 
             var endUtc = DateTime.UtcNow;
 
             if (!_chunkScratch.TryGetValue(chunkEntryId, out var scratch))
             {
-                // We didn't have scratch info; fallback to defaults.
-                scratch = new ChunkScratchInfo
-                {
-                    StartUtc = endUtc,
-                    ChunkFileName = "",
-                    CompressionMethod = CompressionMethod.Zstd,
-                    FileCount = 0,
-                    UncompressedBytes = 0,
-                    CompressedBytes = 0
-                };
+                throw new InvalidOperationException(
+                    $"No scratch state found for chunk '{chunkEntryId}'. " +
+                    "CompleteChunkAsync was called without a matching StartChunkAsync / RecordFileAsync."
+                );
             }
 
             var runTime = endUtc - scratch.StartUtc;
             if (runTime < TimeSpan.Zero) runTime = TimeSpan.Zero;
 
-            // Build updated row
-            var updatedChunkRow = new FlexBackupChunkEntry
-            {
-                ChunkEntryId = chunkEntryId,
-                BackupEntryId = _currentBackupEntryId!,
-                CompressionMethod = scratch.CompressionMethod,
+            // Get existing chunk row (we need to update it)
+            var currentChunk = await _chunkEntryStore.GetByIdAsync(chunkEntryId, cancellationToken).ConfigureAwait(false) 
+                ?? throw new InvalidOperationException($"No chunk entry found with ChunkEntryId '{chunkEntryId}'.");
 
-                StartDateTimeUtc = scratch.StartUtc,
-                EndDateTimeUtc = endUtc,
-                RunTimeMs = runTime.Milliseconds,
-                CreateTimeMs = createTime.Milliseconds,
-                CompressTimeMs = compressTime.Milliseconds,
+            currentChunk.EndDateTimeUtc = endUtc;
+            currentChunk.RunTimeMs = (long)runTime.TotalMilliseconds;
+            currentChunk.CreateTimeMs = (long)createTime.TotalMilliseconds;
+            currentChunk.CompressTimeMs = (long)compressTime.TotalMilliseconds;
 
-                ChunkFileName = scratch.ChunkFileName,
-                ChunkHash = chunkHash,
+            currentChunk.ChunkHash = chunkHash;
 
-                FileSize = scratch.UncompressedBytes,
-                FileSizeCompressed = finalCompressedSizeBytes,
+            currentChunk.FileSize = scratch.UncompressedBytes;
+            currentChunk.FileSizeCompressed = finalCompressedSizeBytes;
 
-                CpuTimeMs = 0,
-                CpuPercent = 0,
-                MemoryStart = 0,
-                MemoryEnd = 0,
-
-                // If you keep ChunkIndex in DB, you might need to track/store it too.
-            };
+            currentChunk.CpuTimeMs = 0;
+            currentChunk.CpuPercent = 0;
+            currentChunk.MemoryStart = 0;
+            currentChunk.MemoryEnd = 0;
 
             // Persist the final state. Your store should support Update.
-            await _chunkEntryStore.UpdateAsync(updatedChunkRow, cancellationToken).ConfigureAwait(false);
+            await _chunkEntryStore.UpdateAsync(currentChunk, cancellationToken).ConfigureAwait(false);
 
             // Clean up scratch for this chunk
             _chunkScratch.TryRemove(chunkEntryId, out _);
