@@ -1,7 +1,10 @@
-﻿using FlexGuard.Core.Backup;
+﻿using FlexGuard.CLI.Infrastructure;
+using FlexGuard.Core.Backup;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Manifest;
+using FlexGuard.Core.Models;
 using FlexGuard.Core.Options;
+using FlexGuard.Core.Recording;
 using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
@@ -19,9 +22,12 @@ public static class BackupExecutor
     {
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
 
+        var recorder = Services.Get<BackupRunRecorder>();
+        recorder.StartRunAsync(options.JobName, options.Mode, options.Compression, CancellationToken.None).GetAwaiter().GetResult(); ;
+
         DateTime? lastBackupTime = null;
 
-        if (options.Mode == OperationMode.DifferentialBackup)
+        if (options.Mode == Core.Options.OperationMode.DifferentialBackup)
         {
             var lastBackupEntry = registryManager.GetLatestEntry();
             lastBackupTime = lastBackupEntry?.TimestampStart;
@@ -79,6 +85,8 @@ public static class BackupExecutor
                   Path.Combine(backupFolderPath, $"registry_{options.JobName}.json"), true);
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, hashManifestFileName),
                   Path.Combine(backupFolderPath, hashManifestFileName),true);
+
+        recorder.CompleteRunAsync(RunStatus.Completed, null, CancellationToken.None).GetAwaiter().GetResult();
 
         reporter.Success("Backup process completed successfully.");
     }

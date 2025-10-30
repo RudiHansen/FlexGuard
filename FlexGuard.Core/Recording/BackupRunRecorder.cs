@@ -1,5 +1,7 @@
 ﻿using FlexGuard.Core.Abstractions;
+using FlexGuard.Core.Compression;
 using FlexGuard.Core.Models;
+using FlexGuard.Core.Options;
 using System.Collections.Concurrent;
 
 namespace FlexGuard.Core.Recording

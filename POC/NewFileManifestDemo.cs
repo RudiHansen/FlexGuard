@@ -1,4 +1,5 @@
 ﻿using FlexGuard.Core.Abstractions;
+using FlexGuard.Core.Compression;
 using FlexGuard.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 

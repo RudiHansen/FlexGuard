@@ -1,4 +1,5 @@
-﻿using NUlid;
+﻿using FlexGuard.Core.Compression;
+using NUlid;
 
 namespace FlexGuard.Core.Models;
 
@@ -20,7 +21,7 @@ public sealed class NewFileManifest
     public required DateTimeOffset TimestampUtc { get; init; }
 
     /// <summary>Komprimeringsmetode brugt for kørslen.</summary>
-    public CompressionMethod Compression { get; init; } = CompressionMethod.None;
+    public CompressionMethod Compression { get; init; } = CompressionMethod.Zstd;
 
     /// <summary>Valgfri reference til tilhørende run (kan erstattes af ULID senere).</summary>
     public long? RunRefId { get; init; }
@@ -35,13 +36,4 @@ public enum ManifestType
     None = 0,
     Full,
     Diff
-}
-
-/// <summary>Komprimeringsmetode på manifest-niveau.</summary>
-public enum CompressionMethod
-{
-    None = 0,
-    GZip,
-    Brotli,
-    Zstd
 }

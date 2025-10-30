@@ -1,4 +1,6 @@
-﻿using NUlid;
+﻿using FlexGuard.Core.Compression;
+using FlexGuard.Core.Options;
+using NUlid;
 
 namespace FlexGuard.Core.Models
 {
@@ -10,8 +12,8 @@ namespace FlexGuard.Core.Models
         // ULID primary key
         public string BackupEntryId { get; init; } = Ulid.NewUlid().ToString();
         public required string JobName { get; init; }
-        public OperationMode OperationMode { get; init; } = OperationMode.Unknown;
-        public CompressionMethod CompressionMethod { get; init; } = CompressionMethod.None;
+        public OperationMode OperationMode { get; init; } = OperationMode.FullBackup;
+        public CompressionMethod CompressionMethod { get; init; } = CompressionMethod.Zstd;
         public RunStatus Status { get; set; } = RunStatus.Running;
         public string? StatusMessage { get; set; }
         // UTC timestamps

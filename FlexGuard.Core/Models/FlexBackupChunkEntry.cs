@@ -1,4 +1,5 @@
-﻿using NUlid;
+﻿using FlexGuard.Core.Compression;
+using NUlid;
 
 namespace FlexGuard.Core.Models
 {
@@ -12,7 +13,7 @@ namespace FlexGuard.Core.Models
         // FK to FlexBackupEntry (also ULID)
         public required int ChunkIdx { get; init; }
         public required string BackupEntryId { get; init; }
-        public CompressionMethod CompressionMethod { get; init; } = CompressionMethod.None;
+        public CompressionMethod CompressionMethod { get; init; } = CompressionMethod.Zstd;
         public RunStatus Status { get; init; } = RunStatus.Running;
         public string? StatusMessage { get; init; }
         // Timing (UTC)
