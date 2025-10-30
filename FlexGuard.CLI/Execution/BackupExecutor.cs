@@ -14,7 +14,7 @@ namespace FlexGuard.CLI.Execution;
 
 public static class BackupExecutor
 {
-    public static void Run(
+    public static async Task RunAsync(
         ProgramOptions options,
         BackupJobConfig jobConfig,
         BackupRegistryManager registryManager,
@@ -23,7 +23,7 @@ public static class BackupExecutor
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
 
         var recorder = Services.Get<BackupRunRecorder>();
-        recorder.StartRunAsync(options.JobName, options.Mode, options.Compression, CancellationToken.None).GetAwaiter().GetResult(); ;
+        await recorder.StartRunAsync(options.JobName, options.Mode, options.Compression, CancellationToken.None);
 
         DateTime? lastBackupTime = null;
 
@@ -86,7 +86,7 @@ public static class BackupExecutor
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, hashManifestFileName),
                   Path.Combine(backupFolderPath, hashManifestFileName),true);
 
-        recorder.CompleteRunAsync(RunStatus.Completed, null, CancellationToken.None).GetAwaiter().GetResult();
+        await recorder.CompleteRunAsync(RunStatus.Completed, null, CancellationToken.None);
 
         reporter.Success("Backup process completed successfully.");
     }

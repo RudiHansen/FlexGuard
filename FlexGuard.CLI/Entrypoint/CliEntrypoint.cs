@@ -10,7 +10,7 @@ namespace FlexGuard.CLI.Entrypoint;
 
 public static class CliEntrypoint
 {
-    public static void Run(string[] args)
+    public static async Task RunAsync(string[] args)
     {
         using var scope = PerformanceTracker.TrackSection("Main");
         var reporter = new MessageReporterConsole(debugToConsole: false, debugToFile: true);
@@ -31,7 +31,7 @@ public static class CliEntrypoint
 
             case OperationMode.FullBackup:
             case OperationMode.DifferentialBackup:
-                BackupExecutor.Run(options, jobConfig, registry, reporter);
+                await BackupExecutor.RunAsync(options, jobConfig, registry, reporter);
                 break;
         }
     }

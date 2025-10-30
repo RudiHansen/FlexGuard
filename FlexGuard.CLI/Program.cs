@@ -9,7 +9,7 @@ using FlexGuard.CLI.Infrastructure;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         // ---- Minimal DI setup (ingen Host) ----
         var services = new ServiceCollection();
@@ -32,7 +32,7 @@ class Program
 
 
         PerformanceTracker.Instance.StartGlobal();
-        CliEntrypoint.Run(args);
+        await CliEntrypoint.RunAsync(args);
         PerformanceTracker.Instance.EndGlobal();
         var elapsed = PerformanceTracker.Instance.GetGlobalElapsed();
         if (elapsed.TotalMinutes >= 5)
