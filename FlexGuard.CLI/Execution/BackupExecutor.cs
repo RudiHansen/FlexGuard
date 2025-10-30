@@ -23,7 +23,7 @@ public static class BackupExecutor
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
 
         var recorder = Services.Get<BackupRunRecorder>();
-        await recorder.StartRunAsync(options.JobName, options.Mode, options.Compression, CancellationToken.None);
+        await recorder.StartRunAsync(options.JobName, options.Mode, options.Compression);
 
         DateTime? lastBackupTime = null;
 
@@ -69,7 +69,7 @@ public static class BackupExecutor
 
                 foreach (var group in fileGroups)
                 {
-                    ChunkProcessor.Process(group, backupFolderPath, reporterWithProgress, fileManifestBuilder, hashManifestBuilder);
+                    ChunkProcessor.ProcessAsync(group, backupFolderPath, reporterWithProgress, fileManifestBuilder, hashManifestBuilder,recorder).GetAwaiter().GetResult();
                 }
             });
 
@@ -86,7 +86,7 @@ public static class BackupExecutor
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, hashManifestFileName),
                   Path.Combine(backupFolderPath, hashManifestFileName),true);
 
-        await recorder.CompleteRunAsync(RunStatus.Completed, null, CancellationToken.None);
+        await recorder.CompleteRunAsync(RunStatus.Completed, null);
 
         reporter.Success("Backup process completed successfully.");
     }

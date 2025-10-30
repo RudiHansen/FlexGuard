@@ -145,23 +145,16 @@ namespace FlexGuard.Data.Repositories.Sqlite
                 new { BackupEntryId = backupEntryId },
                 cancellationToken: ct));
         }
-
         private static void Validate(FlexBackupEntry e)
         {
-            if (string.IsNullOrWhiteSpace(e.JobName) || e.JobName.Length > FlexBackupLimits.JobNameMax)
-                throw new ArgumentException($"JobName must be 1–{FlexBackupLimits.JobNameMax} chars.", nameof(e));
-
-            if (e.StatusMessage is { Length: > FlexBackupLimits.StatusMessageMax })
-                throw new ArgumentException($"StatusMessage must be ≤ {FlexBackupLimits.StatusMessageMax} chars.", nameof(e));
-
-            if (e.TotalFiles < 0 || e.TotalChunks < 0 || e.TotalBytes < 0 || e.TotalBytesCompressed < 0)
-                throw new ArgumentOutOfRangeException(nameof(e), "Totals must be >= 0.");
-
-            if (e.RunTimeMs < 0)
-                throw new ArgumentOutOfRangeException(nameof(e), "RunTimeMs must be >= 0.");
-
-            if (e.CompressionRatio < 0)
-                throw new ArgumentOutOfRangeException(nameof(e), "CompressionRatio must be >= 0.");
+            EnsureMax(e.JobName, FlexBackupLimits.JobNameMax, nameof(e.JobName));
+            EnsureMax(e.StatusMessage, FlexBackupLimits.StatusMessageMax, nameof(e.StatusMessage));
+        }
+        private static void EnsureMax(string? value, int max, string fieldName)
+        {
+            if (value is null) return;            // null er ok
+            if (value.Length > max)
+                throw new ArgumentException($"{fieldName} length must be ≤ {max} characters.", fieldName);
         }
 
         private async Task EnsureSchemaAsync(CancellationToken ct)

@@ -77,20 +77,14 @@ namespace FlexGuard.Data.Repositories.Json
 
         private static void Validate(FlexBackupEntry e)
         {
-            if (string.IsNullOrWhiteSpace(e.JobName) || e.JobName.Length > FlexBackupLimits.JobNameMax)
-                throw new ArgumentException($"JobName must be 1–{FlexBackupLimits.JobNameMax} chars.", nameof(e));
-
-            if (e.StatusMessage is { Length: > FlexBackupLimits.StatusMessageMax })
-                throw new ArgumentException($"StatusMessage must be ≤ {FlexBackupLimits.StatusMessageMax} chars.", nameof(e));
-
-            if (e.TotalFiles < 0 || e.TotalChunks < 0 || e.TotalBytes < 0 || e.TotalBytesCompressed < 0)
-                throw new ArgumentOutOfRangeException(nameof(e), "Totals must be >= 0.");
-
-            if (e.RunTimeMs < 0)
-                throw new ArgumentOutOfRangeException(nameof(e), "RunTimeMs must be >= 0.");
-
-            if (e.CompressionRatio < 0)
-                throw new ArgumentOutOfRangeException(nameof(e), "CompressionRatio must be >= 0.");
+            EnsureMax(e.JobName, FlexBackupLimits.JobNameMax, nameof(e.JobName));
+            EnsureMax(e.StatusMessage, FlexBackupLimits.StatusMessageMax, nameof(e.StatusMessage));
+        }
+        private static void EnsureMax(string? value, int max, string fieldName)
+        {
+            if (value is null) return;            // null er ok
+            if (value.Length > max)
+                throw new ArgumentException($"{fieldName} length must be ≤ {max} characters.", fieldName);
         }
 
         private async Task<IReadOnlyList<FlexBackupEntry>> ReadAsync(CancellationToken ct)
@@ -106,17 +100,45 @@ namespace FlexGuard.Data.Repositories.Json
             var dir = Path.GetDirectoryName(_path)!;
             Directory.CreateDirectory(dir);
 
-            var tmp = _path + ".tmp";
-            var bak = _path + ".bak";
+            var tmp = Path.Combine(dir, $".{Path.GetFileName(_path)}.{Guid.NewGuid():N}.tmp");
 
-            await using (var fs = File.Open(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+            await using (var fs = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                await JsonSerializer.SerializeAsync(fs, rows, _json, ct);
-                await fs.FlushAsync(ct);
+                await JsonSerializer.SerializeAsync(fs, rows, _json, ct).ConfigureAwait(false);
+                await fs.FlushAsync(ct).ConfigureAwait(false);
             }
 
-            if (!File.Exists(_path)) { File.Move(tmp, _path); return; }
-            File.Replace(tmp, _path, bak, true);
+            // Første skrivning: ingen Replace, bare Move (hurtigt og sikkert)
+            if (!File.Exists(_path))
+            {
+                File.Move(tmp, _path);
+                return;
+            }
+
+            // Sørg for at dest ikke er ReadOnly
+            var attrs = File.GetAttributes(_path);
+            if ((attrs & FileAttributes.ReadOnly) != 0)
+                File.SetAttributes(_path, attrs & ~FileAttributes.ReadOnly);
+
+            const int maxRetries = 5;
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    // Ingen backup-fil her – vi holder det hurtigt og enkelt
+                    File.Replace(tmp, _path, null, ignoreMetadataErrors: true);
+                    return;
+                }
+                catch (IOException) when (i < maxRetries - 1)
+                {
+                    // Giv evt. en læser tid til at slippe håndtaget
+                    await Task.Delay(25, ct).ConfigureAwait(false);
+                }
+            }
+
+            // Fallback hvis Replace bliver ved med at fejle
+            File.Copy(tmp, _path, overwrite: true);
+            File.Delete(tmp);
         }
     }
 }

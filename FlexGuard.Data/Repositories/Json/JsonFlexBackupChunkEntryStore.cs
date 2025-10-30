@@ -75,62 +75,18 @@ namespace FlexGuard.Data.Repositories.Json
 
         private static void Validate(FlexBackupChunkEntry e)
         {
-            if (string.IsNullOrWhiteSpace(e.BackupEntryId))
-            {
-                throw new ArgumentException(
-                    "BackupEntryId is required.",
-                    nameof(e));
-            }
-
-            if (string.IsNullOrWhiteSpace(e.ChunkFileName) ||
-                e.ChunkFileName.Length > FlexBackupLimits.ChunkFileNameMax)
-            {
-                throw new ArgumentException(
-                    $"ChunkFileName must be 1–{FlexBackupLimits.ChunkFileNameMax} chars.",
-                    nameof(e));
-            }
-
-            if (string.IsNullOrWhiteSpace(e.ChunkHash) ||
-                e.ChunkHash.Length != FlexBackupLimits.HashHexLen)
-            {
-                throw new ArgumentException(
-                    $"ChunkHash must be {FlexBackupLimits.HashHexLen} hex chars.",
-                    nameof(e));
-            }
-
-            if (e.StatusMessage is { Length: > FlexBackupLimits.StatusMessageMax })
-            {
-                throw new ArgumentException(
-                    $"StatusMessage must be ≤ {FlexBackupLimits.StatusMessageMax} chars.",
-                    nameof(e));
-            }
-
-            if (e.RunTimeMs < 0 ||
-                e.CreateTimeMs < 0 ||
-                e.CompressTimeMs < 0 ||
-                e.CpuTimeMs < 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(e),
-                    "Timing values must be >= 0.");
-            }
-
-            if (e.FileSize < 0 ||
-                e.FileSizeCompressed < 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(e),
-                    "FileSize values must be >= 0.");
-            }
-
-            if (e.CpuPercent < 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(e),
-                    "CpuPercent must be >= 0.");
-            }
+            EnsureMax(e.ChunkEntryId, FlexBackupLimits.UlidLen, nameof(e.ChunkEntryId));
+            EnsureMax(e.BackupEntryId, FlexBackupLimits.UlidLen, nameof(e.BackupEntryId));
+            EnsureMax(e.ChunkFileName, FlexBackupLimits.ChunkFileNameMax, nameof(e.ChunkFileName));
+            EnsureMax(e.ChunkHash, FlexBackupLimits.HashHexLen, nameof(e.ChunkHash));
+            EnsureMax(e.StatusMessage, FlexBackupLimits.StatusMessageMax, nameof(e.StatusMessage));
         }
-
+        private static void EnsureMax(string? value, int max, string fieldName)
+        {
+            if (value is null) return;            // null er ok
+            if (value.Length > max)
+                throw new ArgumentException($"{fieldName} length must be ≤ {max} characters.", fieldName);
+        }
 
         private async Task<IReadOnlyList<FlexBackupChunkEntry>> ReadAsync(CancellationToken ct)
         {
@@ -145,17 +101,45 @@ namespace FlexGuard.Data.Repositories.Json
             var dir = Path.GetDirectoryName(_path)!;
             Directory.CreateDirectory(dir);
 
-            var tmp = _path + ".tmp";
-            var bak = _path + ".bak";
+            var tmp = Path.Combine(dir, $".{Path.GetFileName(_path)}.{Guid.NewGuid():N}.tmp");
 
-            await using (var fs = File.Open(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+            await using (var fs = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                await JsonSerializer.SerializeAsync(fs, rows, _json, ct);
-                await fs.FlushAsync(ct);
+                await JsonSerializer.SerializeAsync(fs, rows, _json, ct).ConfigureAwait(false);
+                await fs.FlushAsync(ct).ConfigureAwait(false);
             }
 
-            if (!File.Exists(_path)) { File.Move(tmp, _path); return; }
-            File.Replace(tmp, _path, bak, true);
+            // Første skrivning: ingen Replace, bare Move (hurtigt og sikkert)
+            if (!File.Exists(_path))
+            {
+                File.Move(tmp, _path);
+                return;
+            }
+
+            // Sørg for at dest ikke er ReadOnly
+            var attrs = File.GetAttributes(_path);
+            if ((attrs & FileAttributes.ReadOnly) != 0)
+                File.SetAttributes(_path, attrs & ~FileAttributes.ReadOnly);
+
+            const int maxRetries = 5;
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    // Ingen backup-fil her – vi holder det hurtigt og enkelt
+                    File.Replace(tmp, _path, null, ignoreMetadataErrors: true);
+                    return;
+                }
+                catch (IOException) when (i < maxRetries - 1)
+                {
+                    // Giv evt. en læser tid til at slippe håndtaget
+                    await Task.Delay(25, ct).ConfigureAwait(false);
+                }
+            }
+
+            // Fallback hvis Replace bliver ved med at fejle
+            File.Copy(tmp, _path, overwrite: true);
+            File.Delete(tmp);
         }
     }
 }

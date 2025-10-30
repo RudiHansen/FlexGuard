@@ -162,73 +162,20 @@ namespace FlexGuard.Data.Repositories.Sqlite
                 new { FileEntryId = fileEntryId },
                 cancellationToken: ct));
         }
-
         private static void Validate(FlexBackupFileEntry e)
         {
-            if (string.IsNullOrWhiteSpace(e.ChunkEntryId))
-            {
-                throw new ArgumentException(
-                    "ChunkEntryId is required.",
-                    nameof(e));
-            }
-
-            if (string.IsNullOrWhiteSpace(e.BackupEntryId))
-            {
-                throw new ArgumentException(
-                    "BackupEntryId is required.",
-                    nameof(e));
-            }
-
-            if (string.IsNullOrWhiteSpace(e.RelativePath) ||
-                e.RelativePath.Length > FlexBackupLimits.RelativePathMax)
-            {
-                throw new ArgumentException(
-                    $"RelativePath must be 1–{FlexBackupLimits.RelativePathMax} chars.",
-                    nameof(e));
-            }
-
-            if (string.IsNullOrWhiteSpace(e.FileHash) ||
-                e.FileHash.Length != FlexBackupLimits.HashHexLen)
-            {
-                throw new ArgumentException(
-                    $"FileHash must be {FlexBackupLimits.HashHexLen} hex chars.",
-                    nameof(e));
-            }
-
-            if (e.StatusMessage is { Length: > FlexBackupLimits.StatusMessageMax })
-            {
-                throw new ArgumentException(
-                    $"StatusMessage must be ≤ {FlexBackupLimits.StatusMessageMax} chars.",
-                    nameof(e));
-            }
-
-            if (e.RunTimeMs < 0 ||
-                e.CreateTimeMs < 0 ||
-                e.CompressTimeMs < 0 ||
-                e.CpuTimeMs < 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(e),
-                    "Timing values must be >= 0.");
-            }
-
-            if (e.FileSize < 0 ||
-                e.FileSizeCompressed < 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(e),
-                    "FileSize values must be >= 0.");
-            }
-
-            if (e.CpuPercent < 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(e),
-                    "CpuPercent must be >= 0.");
-            }
+            EnsureMax(e.ChunkEntryId, FlexBackupLimits.UlidLen, nameof(e.ChunkEntryId));
+            EnsureMax(e.BackupEntryId, FlexBackupLimits.UlidLen, nameof(e.BackupEntryId));
+            EnsureMax(e.RelativePath, FlexBackupLimits.RelativePathMax, nameof(e.RelativePath));
+            EnsureMax(e.FileHash, FlexBackupLimits.HashHexLen, nameof(e.FileHash));
+            EnsureMax(e.StatusMessage, FlexBackupLimits.StatusMessageMax, nameof(e.StatusMessage));
         }
-
-
+        private static void EnsureMax(string? value, int max, string fieldName)
+        {
+            if (value is null) return;            // null er ok
+            if (value.Length > max)
+                throw new ArgumentException($"{fieldName} length must be ≤ {max} characters.", fieldName);
+        }
         private async Task EnsureSchemaAsync(CancellationToken ct)
         {
             if (_schemaReady) return;

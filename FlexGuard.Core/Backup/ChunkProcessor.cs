@@ -1,6 +1,7 @@
 ﻿using FlexGuard.Core.Compression;
 using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Profiling;
+using FlexGuard.Core.Recording;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 using System.IO.Compression;
@@ -9,12 +10,13 @@ namespace FlexGuard.Core.Backup;
 
 public static class ChunkProcessor
 {
-    public static void Process(
+    public static async Task ProcessAsync(
         FileGroup group,
         string backupFolderPath,
         IMessageReporter reporter,
         FileManifestBuilder fileManifestBuilder,
-        HashManifestBuilder hashManifestBuilder)
+        HashManifestBuilder hashManifestBuilder,
+        BackupRunRecorder recorder)
     {
         var chunkFileName = $"{group.Index:D4}.fgchunk";
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
@@ -30,8 +32,13 @@ public static class ChunkProcessor
         // Step 1: Create temporary zip file
         var tempZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
+        string chunkHash        = string.Empty;
+        long compressedSize     = 0;
+        TimeSpan createTime     = TimeSpan.Zero; // TODO: Implement time measurement
+        TimeSpan compressTime   = TimeSpan.Zero; // TODO: Implement time measurement
         try
         {
+            string chunkEntryId = await recorder.StartChunkAsync(chunkFileName, fileManifestBuilder.Compression, group.Index);
             using (var scope = PerformanceTracker.TrackSection("Creating Chunk"))
             {
                 scope.Set("chunkIndex", group.Index);
@@ -41,6 +48,7 @@ public static class ChunkProcessor
                 {
                     try
                     {
+                        DateTimeOffset fileProcessStartUtc = DateTimeOffset.UtcNow;
                         using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                         // Compute hash directly from stream
@@ -60,7 +68,10 @@ public static class ChunkProcessor
                             CompressionSkipped = (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible),
                             CompressionRatio = 0
                         });
+                        DateTimeOffset fileProcessEndUtc = DateTimeOffset.UtcNow;
+
                         reporter.ReportProgress(file.FileSize, file.RelativePath);
+                        await recorder.RecordFileAsync(chunkEntryId, file.RelativePath, hash, file.FileSize, file.FileSize, file.LastWriteTimeUtc, fileProcessStartUtc, fileProcessEndUtc);
                     }
                     catch (Exception ex)
                     {
@@ -85,7 +96,7 @@ public static class ChunkProcessor
                     compressor.Compress(zipInput, outStream);
                 }
 
-                string chunkHash = HashHelper.ComputeHash(outputPath);
+                chunkHash = HashHelper.ComputeHash(outputPath);
                 hashManifestBuilder.AddChunk(new ChunkHashEntry
                 {
                     ChunkFile = $"{group.Index:D4}.fgchunk",
@@ -93,7 +104,7 @@ public static class ChunkProcessor
                     SizeBytes = new FileInfo(outputPath).Length
                 });
 
-                var compressedSize = new FileInfo(outputPath).Length;
+                compressedSize = new FileInfo(outputPath).Length;
                 var ratio = originalSize > 0
                     ? (1.0 - ((double)compressedSize / originalSize)) * 100.0
                     : 0;
@@ -102,6 +113,7 @@ public static class ChunkProcessor
                 scope.Set("compressedSize", compressedSize);
                 scope.Set("compressionRatio", ratio);
             }
+            await recorder.CompleteChunkAsync(chunkEntryId, chunkHash, compressedSize, createTime, compressTime);
         }
         catch (Exception ex)
         {
