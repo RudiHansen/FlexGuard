@@ -1,11 +1,12 @@
 using FlexGuard.CLI.Entrypoint;
-using FlexGuard.Core.Profiling;
-using FlexGuard.Core.Util;
-using FlexGuard.Core.Abstractions;                 // IFlexBackupEntryStore, ...
-using FlexGuard.Core.Recording;                   // BackupRunRecorder  (din klasse)
-using FlexGuard.Data.Repositories.Json;           // JsonFlexBackup* stores
-using Microsoft.Extensions.DependencyInjection;
 using FlexGuard.CLI.Infrastructure;
+using FlexGuard.Core.Abstractions;                 // IFlexBackupEntryStore, ...
+using FlexGuard.Core.Profiling;
+using FlexGuard.Core.Recording;                   // BackupRunRecorder  (din klasse)
+using FlexGuard.Core.Util;
+using FlexGuard.Data.Repositories.Json;           // JsonFlexBackup* stores
+using FlexGuard.Data.Repositories.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 
 class Program
 {
@@ -17,11 +18,12 @@ class Program
         // Vælg en base-mappe til JSON-filer (ændr gerne til noget andet)
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var baseDir = Path.Combine(appData, "FlexGuard");
+        var sqliteDbPath = Path.Combine(baseDir, "FlexGuard.db");
 
         // Registrér JSON-stores med filstier
-        services.AddSingleton<IFlexBackupEntryStore>(sp => new JsonFlexBackupEntryStore(Path.Combine(baseDir, "FlexBackupEntry.json")));
-        services.AddSingleton<IFlexBackupChunkEntryStore>(sp => new JsonFlexBackupChunkEntryStore(Path.Combine(baseDir, "FlexBackupChunkEntry.json")));
-        services.AddSingleton<IFlexBackupFileEntryStore>(sp => new JsonFlexBackupFileEntryStore(Path.Combine(baseDir, "FlexBackupFileEntry.json")));
+        services.AddSingleton<IFlexBackupEntryStore>(sp => new SqliteFlexBackupEntryStore(sqliteDbPath));
+        services.AddSingleton<IFlexBackupChunkEntryStore>(sp => new SqliteFlexBackupChunkEntryStore(sqliteDbPath));
+        services.AddSingleton<IFlexBackupFileEntryStore>(sp => new SqliteFlexBackupFileEntryStore(sqliteDbPath));
 
         // Recorder én pr. proces (du kører kun ét job ad gangen)
         services.AddSingleton<BackupRunRecorder>();

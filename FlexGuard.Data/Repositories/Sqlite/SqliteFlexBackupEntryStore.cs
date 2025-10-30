@@ -40,7 +40,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
                              Status, StatusMessage,
                              StartDateTimeUtc, EndDateTimeUtc,
                              RunTimeMs,
-                             TotalFiles, TotalGroups, TotalBytes, TotalBytesCompressed,
+                             TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
                              CompressionRatio
                       FROM FlexBackupEntry
                       ORDER BY StartDateTimeUtc DESC;
@@ -61,7 +61,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
                              Status, StatusMessage,
                              StartDateTimeUtc, EndDateTimeUtc,
                              RunTimeMs,
-                             TotalFiles, TotalGroups, TotalBytes, TotalBytesCompressed,
+                             TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
                              CompressionRatio
                       FROM FlexBackupEntry
                       WHERE BackupEntryId = @BackupEntryId;
@@ -92,14 +92,14 @@ namespace FlexGuard.Data.Repositories.Sqlite
                          Status, StatusMessage,
                          StartDateTimeUtc, EndDateTimeUtc,
                          RunTimeMs,
-                         TotalFiles, TotalGroups, TotalBytes, TotalBytesCompressed,
+                         TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
                          CompressionRatio)
                       VALUES
                         (@BackupEntryId, @JobName, @OperationMode, @CompressionMethod,
                          @Status, @StatusMessage,
                          @StartDateTimeUtc, @EndDateTimeUtc,
                          @RunTimeMs,
-                         @TotalFiles, @TotalGroups, @TotalBytes, @TotalBytesCompressed,
+                         @TotalFiles, @TotalChunks, @TotalBytes, @TotalBytesCompressed,
                          @CompressionRatio);
                       """;
 
@@ -123,7 +123,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
                           EndDateTimeUtc=@EndDateTimeUtc,
                           RunTimeMs=@RunTimeMs,
                           TotalFiles=@TotalFiles,
-                          TotalGroups=@TotalGroups,
+                          TotalChunks=@TotalChunks,
                           TotalBytes=@TotalBytes,
                           TotalBytesCompressed=@TotalBytesCompressed,
                           CompressionRatio=@CompressionRatio
@@ -174,7 +174,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               EndDateTimeUtc        TEXT    NULL,
               RunTimeMs             INTEGER NOT NULL CHECK(RunTimeMs >= 0),
               TotalFiles            INTEGER NOT NULL CHECK(TotalFiles >= 0),
-              TotalGroups           INTEGER NOT NULL CHECK(TotalGroups >= 0),
+              TotalChunks           INTEGER NOT NULL CHECK(TotalChunks >= 0),
               TotalBytes            INTEGER NOT NULL CHECK(TotalBytes >= 0),
               TotalBytesCompressed  INTEGER NOT NULL CHECK(TotalBytesCompressed >= 0),
               CompressionRatio      REAL    NOT NULL CHECK(CompressionRatio >= 0)
@@ -192,7 +192,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               CreateTimeMs          INTEGER NOT NULL CHECK(CreateTimeMs >= 0),
               CompressTimeMs        INTEGER NOT NULL CHECK(CompressTimeMs >= 0),
               ChunkFileName         TEXT    NOT NULL CHECK(length(ChunkFileName) <= 50),
-              ChunkHash             TEXT    NOT NULL CHECK(length(ChunkHash) = 64),
+              ChunkHash             TEXT    NOT NULL CHECK(length(ChunkHash) <= 64),
               FileSize              INTEGER NOT NULL CHECK(FileSize >= 0),
               FileSizeCompressed    INTEGER NOT NULL CHECK(FileSizeCompressed >= 0),
               CpuTimeMs             INTEGER NOT NULL CHECK(CpuTimeMs >= 0),
@@ -214,7 +214,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               CompressTimeMs        INTEGER NOT NULL CHECK(CompressTimeMs >= 0),
               RelativePath          TEXT    NOT NULL CHECK(length(RelativePath) <= 255),
               LastWriteTimeUtc      TEXT    NOT NULL,
-              FileHash              TEXT    NOT NULL CHECK(length(FileHash) = 64),
+              FileHash              TEXT    NOT NULL CHECK(length(FileHash) <= 64),
               FileSize              INTEGER NOT NULL CHECK(FileSize >= 0),
               FileSizeCompressed    INTEGER NOT NULL CHECK(FileSizeCompressed >= 0),
               CpuTimeMs             INTEGER NOT NULL CHECK(CpuTimeMs >= 0),
