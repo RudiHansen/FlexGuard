@@ -34,8 +34,10 @@ namespace FlexGuard.Core.Recording
         // Totals accumulated across the entire run
         private long _totalFiles;
         private long _totalChunks;
-        private long _totalUncompressedBytes;
-        private long _totalCompressedBytes;
+        private long _totalChunkBytes;
+        private long _totalChunkCompressedBytes;
+        private long _totalFileBytes;
+        private long _totalFileCompressedBytes;
 
         // Per-chunk tracking (optional cache for later completion)
         // We keep a small in-memory structure so that when we complete a chunk,
@@ -51,8 +53,6 @@ namespace FlexGuard.Core.Recording
 
             // Running totals for this chunk (accumulated via RecordFile)
             public long FileCount;
-            public long UncompressedBytes;
-            public long CompressedBytes;
         }
 
         // Thread-safety helpers
@@ -78,8 +78,10 @@ namespace FlexGuard.Core.Recording
             _runStartUtc = DateTimeOffset.UtcNow;
             _totalFiles = 0;
             _totalChunks = 0;
-            _totalUncompressedBytes = 0;
-            _totalCompressedBytes = 0;
+            _totalChunkBytes = 0;
+            _totalChunkCompressedBytes = 0;
+            _totalFileBytes = 0;
+            _totalFileCompressedBytes = 0;
 
             _chunkScratch.Clear();
 
@@ -90,6 +92,8 @@ namespace FlexGuard.Core.Recording
                 OperationMode = mode,
                 CompressionMethod = compressionMethod,
                 StartDateTimeUtc = _runStartUtc,
+                Status = RunStatus.Running,
+                StatusMessage = "Running"
             };
             _currentBackupEntryId = entry.BackupEntryId;
 
@@ -103,7 +107,7 @@ namespace FlexGuard.Core.Recording
         /// Complete the run: finalize FlexBackupEntry with end time and totals.
         /// You can also pass status / error info here if you add those columns.
         /// </summary>
-        public async Task CompleteRunAsync(RunStatus status = RunStatus.Completed,string? errorMessage = null,CancellationToken cancellationToken = default)
+        public async Task CompleteRunAsync(RunStatus status = RunStatus.Completed,string? errorMessage = "Completed",CancellationToken cancellationToken = default)
         {
             EnsureRunActive();
 
@@ -111,8 +115,14 @@ namespace FlexGuard.Core.Recording
             var runTime = endUtc - _runStartUtc;
             if (runTime < TimeSpan.Zero) runTime = TimeSpan.Zero;
 
-            var totalBytes = _totalUncompressedBytes;
-            var totalCompressed = _totalCompressedBytes;
+            // Consistency check: total bytes in chunks should match total bytes in files.
+            if (_totalChunkBytes != _totalFileBytes)
+            {
+                //TODO: Skal nok lige se på hvorfor disse to tal kan afvige lidt.
+            }
+            long totalBytes = Math.Max(_totalChunkBytes,_totalFileBytes);
+            long totalCompressed = Math.Min(_totalChunkCompressedBytes,_totalFileCompressedBytes); // Get the smaller of the two compressed totals.
+
             double ratio = 0;
             if (totalBytes > 0)
             {
@@ -185,7 +195,7 @@ namespace FlexGuard.Core.Recording
         /// <summary>
         /// Mark a chunk as completed. Updates the FlexBackupChunkEntry row with final data.
         /// </summary>
-        public async Task CompleteChunkAsync(string chunkEntryId, string chunkHash, long finalCompressedSizeBytes, TimeSpan createTime, TimeSpan compressTime, CancellationToken cancellationToken = default)
+        public async Task CompleteChunkAsync(string chunkEntryId, string chunkHash, long finalUnCompressedSizeBytes, long finalCompressedSizeBytes, TimeSpan createTime, TimeSpan compressTime, CancellationToken cancellationToken = default)
         {
             EnsureRunActive();
 
@@ -213,7 +223,7 @@ namespace FlexGuard.Core.Recording
 
             currentChunk.ChunkHash = chunkHash;
 
-            currentChunk.FileSize = scratch.UncompressedBytes;
+            currentChunk.FileSize = finalUnCompressedSizeBytes;
             currentChunk.FileSizeCompressed = finalCompressedSizeBytes;
             currentChunk.FileCount = scratch.FileCount;
 
@@ -227,23 +237,24 @@ namespace FlexGuard.Core.Recording
 
             // Clean up scratch for this chunk
             _chunkScratch.TryRemove(chunkEntryId, out _);
+
+            // Update global totals
+            Interlocked.Add(ref _totalChunkBytes, currentChunk.FileSize);
+            Interlocked.Add(ref _totalChunkCompressedBytes, currentChunk.FileSizeCompressed);
         }
 
         /// <summary>
         /// Record that we processed a file into a given chunk.
         /// Creates a FlexBackupFileEntry row and updates in-memory totals.
         /// </summary>
-        public async Task RecordFileAsync(string chunkEntryId,string relativePath,string fileHash,long originalFileSizeBytes,long? compressedFileSizeBytes, DateTimeOffset lastWriteTimeUtc, DateTimeOffset fileProcessStartUtc, DateTimeOffset fileProcessEndUtc,CancellationToken cancellationToken = default)
+        public async Task RecordFileAsync(string chunkEntryId,string relativePath,string fileHash,long originalFileSizeBytes,long compressedFileSizeBytes, DateTimeOffset lastWriteTimeUtc, DateTimeOffset fileProcessStartUtc, DateTimeOffset fileProcessEndUtc,CancellationToken cancellationToken = default)
         {
             EnsureRunActive();
 
             // Update global totals
             Interlocked.Increment(ref _totalFiles);
-            Interlocked.Add(ref _totalUncompressedBytes, originalFileSizeBytes);
-            if (compressedFileSizeBytes.HasValue)
-            {
-                Interlocked.Add(ref _totalCompressedBytes, compressedFileSizeBytes.Value);
-            }
+            Interlocked.Add(ref _totalFileBytes, originalFileSizeBytes);
+            Interlocked.Add(ref _totalFileCompressedBytes, compressedFileSizeBytes);
 
             // Update chunk scratch (must exist for this chunk)
             if (!_chunkScratch.TryGetValue(chunkEntryId, out var scratch))
@@ -255,11 +266,6 @@ namespace FlexGuard.Core.Recording
             }
 
             Interlocked.Increment(ref scratch.FileCount);
-            Interlocked.Add(ref scratch.UncompressedBytes, originalFileSizeBytes);
-            if (compressedFileSizeBytes.HasValue)
-            {
-                Interlocked.Add(ref scratch.CompressedBytes, compressedFileSizeBytes.Value);
-            }
 
             var runTime = fileProcessEndUtc - fileProcessStartUtc;
             if (runTime < TimeSpan.Zero) runTime = TimeSpan.Zero;
@@ -281,7 +287,7 @@ namespace FlexGuard.Core.Recording
                 LastWriteTimeUtc = lastWriteTimeUtc,
                 FileHash = fileHash,
                 FileSize = originalFileSizeBytes,
-                FileSizeCompressed = compressedFileSizeBytes ?? 0,
+                FileSizeCompressed = compressedFileSizeBytes,
 
                 // Performance / telemetry placeholders
                 CpuTimeMs = 0,

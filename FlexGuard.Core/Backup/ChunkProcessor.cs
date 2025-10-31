@@ -34,6 +34,7 @@ public static class ChunkProcessor
 
         string chunkHash        = string.Empty;
         long compressedSize     = 0;
+        long originalSize       = 0;
         TimeSpan createTime     = TimeSpan.Zero; // TODO: Implement time measurement
         TimeSpan compressTime   = TimeSpan.Zero; // TODO: Implement time measurement
         try
@@ -83,7 +84,7 @@ public static class ChunkProcessor
             {
                 scope.Set("chunkIndex", group.Index);
                 scope.Set("chunkType", group.GroupType.ToString());
-                var originalSize = new FileInfo(tempZipPath).Length;
+                originalSize = new FileInfo(tempZipPath).Length;
                 // Step 2: Apply outer compression (GZip, Brotli, or Zstd) unless group is marked as non-compressible
                 if (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible)
                 {
@@ -113,7 +114,7 @@ public static class ChunkProcessor
                 scope.Set("compressedSize", compressedSize);
                 scope.Set("compressionRatio", ratio);
             }
-            await recorder.CompleteChunkAsync(chunkEntryId, chunkHash, compressedSize, createTime, compressTime);
+            await recorder.CompleteChunkAsync(chunkEntryId, chunkHash, originalSize, compressedSize, createTime, compressTime);
         }
         catch (Exception ex)
         {
