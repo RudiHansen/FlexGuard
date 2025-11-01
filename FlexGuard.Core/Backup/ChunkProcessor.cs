@@ -40,9 +40,11 @@ public static class ChunkProcessor
         try
         {
             string chunkEntryId = await recorder.StartChunkAsync(chunkFileName, fileManifestBuilder.Compression, group.Index);
+            using var meterChunk = ResourceUsageMeter.Start();
             using (var scope = PerformanceTracker.TrackSection("Creating Chunk"))
             {
                 scope.Set("chunkIndex", group.Index);
+                using var timerChunkCreate = TimingScope.Start();
                 using var zipFileStream = new FileStream(tempZipPath, FileMode.Create, FileAccess.Write);
                 using var archive = new ZipArchive(zipFileStream, ZipArchiveMode.Create, leaveOpen: false);
                 foreach (var file in group.Files)
@@ -50,6 +52,8 @@ public static class ChunkProcessor
                     try
                     {
                         DateTimeOffset fileProcessStartUtc = DateTimeOffset.UtcNow;
+                        using var timerFileCreate = TimingScope.Start();
+                        using var meterFile = ResourceUsageMeter.Start();
                         using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                         // Compute hash directly from stream
@@ -72,18 +76,24 @@ public static class ChunkProcessor
                         DateTimeOffset fileProcessEndUtc = DateTimeOffset.UtcNow;
 
                         reporter.ReportProgress(file.FileSize, file.RelativePath);
-                        await recorder.RecordFileAsync(chunkEntryId, file.RelativePath, hash, file.FileSize, file.FileSize, file.LastWriteTimeUtc, fileProcessStartUtc, fileProcessEndUtc);
+                        var meterFileResult = meterFile.Stop();
+                        timerFileCreate.Stop();
+                        await recorder.RecordFileAsync(chunkEntryId, file.RelativePath, hash, file.FileSize, file.FileSize, file.LastWriteTimeUtc, fileProcessStartUtc, fileProcessEndUtc,
+                            timerFileCreate.Elapsed, meterFileResult.CpuTime, meterFileResult.PeakCpuPercent, meterFileResult.PeakWorkingSetBytes, meterFileResult.PeakManagedBytes);
                     }
                     catch (Exception ex)
                     {
                         reporter.Warning($"Failed to add file '{file.SourcePath}': {ex.Message}");
                     }
                 }
+                timerChunkCreate.Stop();
+                createTime = timerChunkCreate.Elapsed;
             }
             using (var scope = PerformanceTracker.TrackSection("Compress Chunk"))
             {
                 scope.Set("chunkIndex", group.Index);
                 scope.Set("chunkType", group.GroupType.ToString());
+                using var timerChunkCompress = TimingScope.Start();
                 originalSize = new FileInfo(tempZipPath).Length;
                 // Step 2: Apply outer compression (GZip, Brotli, or Zstd) unless group is marked as non-compressible
                 if (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible)
@@ -110,11 +120,14 @@ public static class ChunkProcessor
                     ? (1.0 - ((double)compressedSize / originalSize)) * 100.0
                     : 0;
 
+                timerChunkCompress.Stop();
+                compressTime = timerChunkCompress.Elapsed;
                 scope.Set("originalSize", originalSize);
                 scope.Set("compressedSize", compressedSize);
                 scope.Set("compressionRatio", ratio);
             }
-            await recorder.CompleteChunkAsync(chunkEntryId, chunkHash, originalSize, compressedSize, createTime, compressTime);
+            var result = meterChunk.Stop();
+            await recorder.CompleteChunkAsync(chunkEntryId, chunkHash, originalSize, compressedSize, createTime, compressTime, result.CpuTime, result.PeakCpuPercent, result.PeakWorkingSetBytes, result.PeakManagedBytes);
         }
         catch (Exception ex)
         {

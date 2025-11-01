@@ -14,8 +14,8 @@ namespace FlexGuard.Core.Models
         public required int ChunkIdx { get; init; }
         public required string BackupEntryId { get; init; }
         public CompressionMethod CompressionMethod { get; init; } = CompressionMethod.Zstd;
-        public RunStatus Status { get; init; } = RunStatus.Running;
-        public string? StatusMessage { get; init; }
+        public RunStatus Status { get; set; } = RunStatus.Running;
+        public string? StatusMessage { get; set; }
         // Timing (UTC)
         public required DateTimeOffset StartDateTimeUtc { get; init; }
         public DateTimeOffset? EndDateTimeUtc { get; set; }

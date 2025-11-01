@@ -86,7 +86,7 @@ public static class BackupExecutor
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, hashManifestFileName),
                   Path.Combine(backupFolderPath, hashManifestFileName),true);
 
-        await recorder.CompleteRunAsync(RunStatus.Completed, null);
+        await recorder.CompleteRunAsync(RunStatus.Completed);
 
         reporter.Success("Backup process completed successfully.");
     }

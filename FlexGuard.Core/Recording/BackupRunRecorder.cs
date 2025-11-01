@@ -176,6 +176,8 @@ namespace FlexGuard.Core.Recording
                 BackupEntryId = _currentBackupEntryId!,
                 CompressionMethod = compressionMethod,
                 StartDateTimeUtc = startUtc,
+                Status = RunStatus.Running,
+                StatusMessage = "Running"
             };
 
             await _chunkEntryStore.InsertAsync(chunkRow, cancellationToken).ConfigureAwait(false);
@@ -195,7 +197,8 @@ namespace FlexGuard.Core.Recording
         /// <summary>
         /// Mark a chunk as completed. Updates the FlexBackupChunkEntry row with final data.
         /// </summary>
-        public async Task CompleteChunkAsync(string chunkEntryId, string chunkHash, long finalUnCompressedSizeBytes, long finalCompressedSizeBytes, TimeSpan createTime, TimeSpan compressTime, CancellationToken cancellationToken = default)
+        public async Task CompleteChunkAsync(string chunkEntryId, string chunkHash, long finalUnCompressedSizeBytes, long finalCompressedSizeBytes, 
+            TimeSpan createTime, TimeSpan compressTime, TimeSpan CpuTime, double PeakCpuPercent, long PeakWorkingSetBytes, long? PeakManagedBytes, CancellationToken cancellationToken = default)
         {
             EnsureRunActive();
 
@@ -213,7 +216,7 @@ namespace FlexGuard.Core.Recording
             if (runTime < TimeSpan.Zero) runTime = TimeSpan.Zero;
 
             // Get existing chunk row (we need to update it)
-            var currentChunk = await _chunkEntryStore.GetByIdAsync(chunkEntryId, cancellationToken).ConfigureAwait(false) 
+            FlexBackupChunkEntry currentChunk = await _chunkEntryStore.GetByIdAsync(chunkEntryId, cancellationToken).ConfigureAwait(false) 
                 ?? throw new InvalidOperationException($"No chunk entry found with ChunkEntryId '{chunkEntryId}'.");
 
             currentChunk.EndDateTimeUtc = endUtc;
@@ -223,14 +226,17 @@ namespace FlexGuard.Core.Recording
 
             currentChunk.ChunkHash = chunkHash;
 
+            currentChunk.Status = RunStatus.Completed;
+            currentChunk.StatusMessage = "Completed";
+
             currentChunk.FileSize = finalUnCompressedSizeBytes;
             currentChunk.FileSizeCompressed = finalCompressedSizeBytes;
             currentChunk.FileCount = scratch.FileCount;
 
-            currentChunk.CpuTimeMs = 0;
-            currentChunk.CpuPercent = 0;
-            currentChunk.MemoryStart = 0;
-            currentChunk.MemoryEnd = 0;
+            currentChunk.CpuTimeMs = (long)CpuTime.TotalMilliseconds;
+            currentChunk.CpuPercent = PeakCpuPercent;
+            currentChunk.MemoryStart = PeakWorkingSetBytes;
+            currentChunk.MemoryEnd = PeakManagedBytes ?? 0;
 
             // Persist the final state. Your store should support Update.
             await _chunkEntryStore.UpdateAsync(currentChunk, cancellationToken).ConfigureAwait(false);
@@ -247,7 +253,10 @@ namespace FlexGuard.Core.Recording
         /// Record that we processed a file into a given chunk.
         /// Creates a FlexBackupFileEntry row and updates in-memory totals.
         /// </summary>
-        public async Task RecordFileAsync(string chunkEntryId,string relativePath,string fileHash,long originalFileSizeBytes,long compressedFileSizeBytes, DateTimeOffset lastWriteTimeUtc, DateTimeOffset fileProcessStartUtc, DateTimeOffset fileProcessEndUtc,CancellationToken cancellationToken = default)
+        public async Task RecordFileAsync(string chunkEntryId,string relativePath,string fileHash,long originalFileSizeBytes,long compressedFileSizeBytes, 
+            DateTimeOffset lastWriteTimeUtc, DateTimeOffset fileProcessStartUtc, DateTimeOffset fileProcessEndUtc,TimeSpan CreateTimeMs,
+            TimeSpan CpuTime, double PeakCpuPercent, long PeakWorkingSetBytes, long? PeakManagedBytes,
+            CancellationToken cancellationToken = default)
         {
             EnsureRunActive();
 
@@ -275,12 +284,15 @@ namespace FlexGuard.Core.Recording
                 BackupEntryId = _currentBackupEntryId!,
                 ChunkEntryId = chunkEntryId,
 
+                Status = RunStatus.Completed,
+                StatusMessage = "Completed",
+
                 StartDateTimeUtc = fileProcessStartUtc,
                 EndDateTimeUtc = fileProcessEndUtc,
                 RunTimeMs = (long)runTime.TotalMilliseconds,
 
                 // If you will later split "CreateTime" vs "CompressTime", you can set them here.
-                CreateTimeMs = 0,
+                CreateTimeMs = (long)CreateTimeMs.TotalMilliseconds,
                 CompressTimeMs = 0,
 
                 RelativePath = relativePath,
@@ -290,11 +302,10 @@ namespace FlexGuard.Core.Recording
                 FileSizeCompressed = compressedFileSizeBytes,
 
                 // Performance / telemetry placeholders
-                CpuTimeMs = 0,
-                CpuPercent = 0,
-                MemoryStart = 0,
-                MemoryEnd = 0,
-
+                CpuTimeMs = (long)CpuTime.TotalMilliseconds,
+                CpuPercent = PeakCpuPercent,
+                MemoryStart = PeakWorkingSetBytes,
+                MemoryEnd = PeakManagedBytes ?? 0,
             };
 
             await _fileEntryStore.InsertAsync(fileRow, cancellationToken).ConfigureAwait(false);
