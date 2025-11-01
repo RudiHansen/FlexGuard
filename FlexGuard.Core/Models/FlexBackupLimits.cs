@@ -6,7 +6,7 @@
         public const int JobNameMax = 50;
         public const int StatusMessageMax = 255;
         public const int ChunkFileNameMax = 50;
-        public const int RelativePathMax = 255;
+        public const int RelativePathMax = 512;
         public const int HashHexLen = 64;
     }
     public enum RunStatus

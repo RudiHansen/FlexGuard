@@ -212,7 +212,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               RunTimeMs             INTEGER NOT NULL CHECK(RunTimeMs >= 0),
               CreateTimeMs          INTEGER NOT NULL CHECK(CreateTimeMs >= 0),
               CompressTimeMs        INTEGER NOT NULL CHECK(CompressTimeMs >= 0),
-              RelativePath          TEXT    NOT NULL CHECK(length(RelativePath) <= 255),
+              RelativePath          TEXT    NOT NULL CHECK(length(RelativePath) <= 512),
               LastWriteTimeUtc      TEXT    NOT NULL,
               FileHash              TEXT    NOT NULL CHECK(length(FileHash) <= 64),
               FileSize              INTEGER NOT NULL CHECK(FileSize >= 0),
