@@ -1,12 +1,12 @@
 using FlexGuard.CLI.Entrypoint;
 using FlexGuard.CLI.Infrastructure;
 using FlexGuard.Core.Abstractions;                 // IFlexBackupEntryStore, ...
-using FlexGuard.Core.Profiling;
 using FlexGuard.Core.Recording;                   // BackupRunRecorder  (din klasse)
 using FlexGuard.Core.Util;
 using FlexGuard.Data.Repositories.Json;           // JsonFlexBackup* stores
 using FlexGuard.Data.Repositories.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 class Program
 {
@@ -33,11 +33,10 @@ class Program
         Services.Init(provider);
 
 
-        PerformanceTracker.Instance.StartGlobal();
+        var sw = Stopwatch.StartNew();
         await CliEntrypoint.RunAsync(args);
-        PerformanceTracker.Instance.EndGlobal();
-        var elapsed = PerformanceTracker.Instance.GetGlobalElapsed();
-        if (elapsed.TotalMinutes >= 5)
+        sw.Stop();
+        if (sw.Elapsed.TotalMinutes >= 5)
         {
             NotificationHelper.PlayBackupCompleteSound();
         }

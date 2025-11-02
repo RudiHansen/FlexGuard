@@ -1,6 +1,5 @@
 ﻿using FlexGuard.Core.Config;
 using FlexGuard.Core.Manifest;
-using FlexGuard.Core.Profiling;
 using FlexGuard.Core.Reporting;
 
 namespace FlexGuard.Core.Backup;
@@ -13,41 +12,39 @@ public static class FileCollector
     DateTime? lastBackupTime = null)
     {
         var entries = new List<PendingFileEntry>();
-        using (var scope = PerformanceTracker.TrackSection("Collect Files"))
+        // Collect files from all sources
+        foreach (var source in config.Sources)
         {
-            foreach (var source in config.Sources)
+            var files = FileEnumerator.GetFiles(source.Path, source.Exclude, reporter);
+
+            foreach (var file in files)
             {
-                var files = FileEnumerator.GetFiles(source.Path, source.Exclude, reporter);
-
-                foreach (var file in files)
+                try
                 {
-                    try
-                    {
-                        var info = new FileInfo(file);
+                    var info = new FileInfo(file);
 
-                        if (lastBackupTime == null || info.LastWriteTimeUtc > lastBackupTime.Value)
+                    if (lastBackupTime == null || info.LastWriteTimeUtc > lastBackupTime.Value)
+                    {
+                        var fullPath = Path.GetFullPath(file);
+                        var drive = Path.GetPathRoot(fullPath)?.TrimEnd('\\', '/').Replace(":", "") ?? "UNKNOWN";
+                        var relativeToRoot = Path.GetRelativePath(Path.GetPathRoot(fullPath) ?? "", fullPath);
+                        var relativePath = Path.Combine(drive, relativeToRoot).Replace('\\', '/');
+
+                        var groupType = DetermineGroupType(file, info.Length);
+
+                        entries.Add(new PendingFileEntry
                         {
-                            var fullPath = Path.GetFullPath(file);
-                            var drive = Path.GetPathRoot(fullPath)?.TrimEnd('\\', '/').Replace(":", "") ?? "UNKNOWN";
-                            var relativeToRoot = Path.GetRelativePath(Path.GetPathRoot(fullPath) ?? "", fullPath);
-                            var relativePath = Path.Combine(drive, relativeToRoot).Replace('\\', '/');
-
-                            var groupType = DetermineGroupType(file, info.Length);
-
-                            entries.Add(new PendingFileEntry
-                            {
-                                SourcePath = fullPath,
-                                RelativePath = relativePath,
-                                FileSize = info.Length,
-                                LastWriteTimeUtc = info.LastWriteTimeUtc,
-                                GroupType = groupType
-                            });
-                        }
+                            SourcePath = fullPath,
+                            RelativePath = relativePath,
+                            FileSize = info.Length,
+                            LastWriteTimeUtc = info.LastWriteTimeUtc,
+                            GroupType = groupType
+                        });
                     }
-                    catch (Exception ex)
-                    {
-                        reporter.Warning($"Could not access file: {file} - {ex.Message}");
-                    }
+                }
+                catch (Exception ex)
+                {
+                    reporter.Warning($"Could not access file: {file} - {ex.Message}");
                 }
             }
         }

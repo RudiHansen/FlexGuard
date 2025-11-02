@@ -3,7 +3,6 @@ using FlexGuard.CLI.Options;
 using FlexGuard.CLI.Reporting;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
-using FlexGuard.Core.Profiling;
 using FlexGuard.Core.Registry;
 
 namespace FlexGuard.CLI.Entrypoint;
@@ -12,7 +11,6 @@ public static class CliEntrypoint
 {
     public static async Task RunAsync(string[] args)
     {
-        using var scope = PerformanceTracker.TrackSection("Main");
         var reporter = new MessageReporterConsole(debugToConsole: false, debugToFile: true);
         reporter.Info("Starting FlexGuard backup...");
 
