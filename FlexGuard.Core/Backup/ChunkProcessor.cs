@@ -106,9 +106,25 @@ public static class ChunkProcessor
                             meterFileResult.PeakWorkingSetBytes,
                             meterFileResult.PeakManagedBytes);
                     }
+                    catch (FileNotFoundException)
+                    {
+                        // This is expected in sync scenarios (OneDrive/Joplin)
+                        reporter.Warning($"Skipped missing file '{file.SourcePath}' (file disappeared during backup).");
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        // Separate message so vi kan se det er permissions
+                        reporter.Warning($"Failed to add file '{file.SourcePath}': access denied ({ex.Message}).");
+                    }
+                    catch (IOException ex)
+                    {
+                        // IO-fejl kan være låst fil, deling m.m.
+                        reporter.Warning($"I/O error while adding file '{file.SourcePath}': {ex.Message}");
+                    }
                     catch (Exception ex)
                     {
-                        reporter.Warning($"Failed to add file '{file.SourcePath}': {ex.Message}");
+                        // Alt andet stadig fanget
+                        reporter.Error($"Failed to add file '{file.SourcePath}': {ex.Message} : {ex.StackTrace}");
                     }
                 }
 

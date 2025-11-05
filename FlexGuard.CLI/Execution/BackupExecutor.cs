@@ -33,11 +33,17 @@ public static class BackupExecutor
         var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
         registryManager.Save();
 
+        var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
+        if(allFiles.Count <= 0)
+        {
+            reporter.Info("There are no files to backup!");
+            return;
+        }
+
         // Create the start record for the BackupJob in FlexBackupEntry
         var recorder = Services.Get<BackupRunRecorder>();
         await recorder.StartRunAsync(options.JobName, backupEntry.DestinationFolderName, options.Mode, options.Compression);
 
-        var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
         var totalSize = allFiles.Sum(f => f.FileSize);
 
         var fileGroups = FileGrouper.GroupFiles(allFiles, options.MaxFilesPerGroup, options.MaxBytesPerGroup);
