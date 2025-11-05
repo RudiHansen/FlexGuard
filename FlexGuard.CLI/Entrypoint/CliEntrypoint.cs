@@ -24,7 +24,7 @@ public static class CliEntrypoint
         switch (options.Mode)
         {
             case OperationMode.Restore:
-                RestoreExecutor.Run(options, jobConfig, registry, reporter);
+                RestoreExecutor.Run(options, jobConfig, reporter);
                 break;
 
             case OperationMode.FullBackup:

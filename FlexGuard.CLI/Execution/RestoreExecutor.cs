@@ -18,7 +18,6 @@ public static class RestoreExecutor
     public static void Run(
         ProgramOptions options,
         BackupJobConfig jobConfig,
-        BackupRegistryManager registryManager,
         IMessageReporter reporter)
     {
         var selector = new RestoreFileSelector(jobConfig);
@@ -56,6 +55,7 @@ public static class RestoreExecutor
                     if (backupEntry == null)
                     {
                         reporter.Error($"Backup entry not found for BackupEntryId: {selectedFiles.First().BackupEntryId}");
+                        return; // Prevent further null dereference
                     }
                     // cache: chunkId -> chunkEntry
                     var chunkCache = new Dictionary<string, FlexBackupChunkEntry?>();
@@ -75,11 +75,10 @@ public static class RestoreExecutor
                         if (chunkEntry is null)
                         {
                             reporter.Error("Chunk entry not found for ChunkEntryId: " + file.ChunkEntryId);
+                            continue; // Prevent further null dereference
                         }
                         else
                         {
-                            // Mangler lige at få path til chunk, har lige hard kodet den til testen.
-                            //var chunkPath = Path.Combine(jobConfig.DestinationPath,file.BackupEntry.DestinationFolderName,file.ChunkFile);
                             string chunkPath = Path.Combine(jobConfig.DestinationPath, backupEntry.DestinationBackupFolder, chunkEntry.ChunkFileName);
 
                             RestoreHelper.RestoreFile(

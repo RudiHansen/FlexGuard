@@ -97,7 +97,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
                       """;
 
             var rows = await conn.QueryAsync<FlexBackupFileEntry>(
-                new CommandDefinition(sql, new { backupEntryId = backupEntryId }, cancellationToken: ct));
+                new CommandDefinition(sql, new { backupEntryId }, cancellationToken: ct));
             return rows.ToList();
         }
 
