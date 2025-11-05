@@ -1,5 +1,9 @@
-﻿using FlexGuard.Core.Compression;
+﻿using FlexGuard.CLI.Infrastructure;
+using FlexGuard.Core.Compression;
+using FlexGuard.Core.Config;
 using FlexGuard.Core.Manifest;
+using FlexGuard.Core.Models;
+using FlexGuard.Core.Recording;
 using FlexGuard.Core.Registry;
 using Spectre.Console;
 using System.Text.Json;
@@ -8,76 +12,45 @@ namespace FlexGuard.CLI.Restore;
 
 public class RestoreFileSelector
 {
-    private readonly BackupRegistry _registry;
-    private readonly string _jobFolder;
-
-    public RestoreFileSelector(BackupRegistry registry, string jobFolder)
+    private readonly BackupJobConfig _jobConfig;
+    
+    public RestoreFileSelector(BackupJobConfig jobConfig)
     {
-        _registry = registry;
-        _jobFolder = jobFolder;
+        _jobConfig = jobConfig;
     }
 
-    public record RestoreSelection(
-        string RelativePath,
-        string ChunkFile,
-        string ChunkHash,
-        long FileSize,
-        string FileHash,
-        BackupRegistry.BackupEntry BackupEntry,
-        CompressionMethod Compression,
-        bool CompressionSkipped);
-
-    public List<RestoreSelection> SelectFiles()
+    public List<FlexBackupFileEntry>? SelectFiles()
     {
+        var recorder = Services.Get<BackupRunRecorder>();
+        var jobs = recorder.RestoreGetFlexBackupEntryForJobName(_jobConfig.JobName).GetAwaiter().GetResult();   // Get list of jobs for the given job name
+
+
         AnsiConsole.Clear();
 
-        // 1. Let user select which backup to restore from
-        var manifestEntry = AnsiConsole.Prompt(
-            new SelectionPrompt<BackupRegistry.BackupEntry>()
-                .Title("Select a [green]backup version[/] to restore from")
-                .UseConverter(entry => $"{entry.TimestampStart:yyyy-MM-dd HH:mm} - {entry.Type}")
-                .AddChoices(_registry.Backups));
-
-        var manifestPath = Path.Combine(_jobFolder, manifestEntry.ManifestFileName);
-        var chunkManifestPath = Path.Combine(_jobFolder, manifestEntry.HashManifestFileName);
-
-        if (!File.Exists(manifestPath))
+        if (jobs is null || jobs.Count == 0)
         {
-            AnsiConsole.MarkupLine($"[red]Manifest file not found: {manifestPath}[/]");
-            return new();
+            AnsiConsole.MarkupLine("[red]No backup runs found for this job.[/]");
+            return null;
         }
 
-        // 2. Load manifest
-        var manifestJson = File.ReadAllText(manifestPath);
-        var manifest = JsonSerializer.Deserialize<FileManifest>(manifestJson);
+        // Show selection prompt to choose a backup run
+        var selected = AnsiConsole.Prompt(
+            new SelectionPrompt<FlexBackupEntry>()
+                .Title("Select a [green]backup run[/] to restore from")
+                .PageSize(10)
+                .UseConverter(e => $"{e.StartDateTimeUtc:yyyy-MM-dd HH:mm} - {e.OperationMode} - {e.JobName}")
+                .AddChoices(jobs)   // nu er det en liste og ikke en Task
+        );
 
-        if (manifest == null)
+        // TODO: Validate selected job status, and perhaps also find som way to ckeck if the backup files are accessible
+        var allFiles = recorder.RestoreGetFlexBackupFileEntryForBackupEntryId(selected.BackupEntryId).GetAwaiter().GetResult(); // Get all files for the selected backup run
+        if(allFiles == null)
         {
-            AnsiConsole.MarkupLine("[red]Failed to deserialize manifest.[/]");
-            return new();
+            AnsiConsole.MarkupLine("[red]No files found for the selected backup run.[/]");
+            return null;
         }
-
-        // 3. Show file selector
-        var allFiles = manifest.Files.Select(f => f.RelativePath).Distinct().OrderBy(p => p).ToList();
-        var selectedPaths = DirectoryViewSelector.Show(allFiles);
-
-        // Initialize the hash manifest helper
-        var hashHelper = new HashManifestHelper(chunkManifestPath);
-
-        // 4. Match back to full manifest entries, including compression method
-        var selections = manifest.Files
-            .Where(f => selectedPaths.Contains(f.RelativePath))
-            .Select(f => new RestoreSelection(
-                f.RelativePath,
-                f.ChunkFile,
-                hashHelper.GetChunkHash(f.ChunkFile),
-                f.FileSize,
-                f.Hash,
-                manifestEntry,
-                manifest.Compression,
-                f.CompressionSkipped))
-            .ToList();
         
-        return selections;
+        var selectedFiles = DirectoryViewSelector.Show(allFiles);
+        return selectedFiles;
     }
 }

@@ -70,7 +70,7 @@ namespace FlexGuard.Core.Recording
         /// Creates a FlexBackupEntry row and initializes in-memory totals.
         /// Assumes there is no active run.
         /// </summary>
-        public async Task<string> StartRunAsync(string jobName,OperationMode mode,CompressionMethod compressionMethod,CancellationToken cancellationToken = default)
+        public async Task<string> StartRunAsync(string jobName,string destinationBackupFolder,OperationMode mode,CompressionMethod compressionMethod,CancellationToken cancellationToken = default)
         {
             if (Interlocked.Exchange(ref _runActiveFlag, 1) == 1)
                 throw new InvalidOperationException("A backup run is already active in this process.");
@@ -89,6 +89,7 @@ namespace FlexGuard.Core.Recording
             var entry = new FlexBackupEntry
             {
                 JobName = jobName,
+                DestinationBackupFolder = destinationBackupFolder,
                 OperationMode = mode,
                 CompressionMethod = compressionMethod,
                 StartDateTimeUtc = _runStartUtc,
@@ -197,7 +198,7 @@ namespace FlexGuard.Core.Recording
         /// <summary>
         /// Mark a chunk as completed. Updates the FlexBackupChunkEntry row with final data.
         /// </summary>
-        public async Task CompleteChunkAsync(string chunkEntryId, string chunkHash, long finalUnCompressedSizeBytes, long finalCompressedSizeBytes, 
+        public async Task CompleteChunkAsync(string chunkEntryId, string chunkHash, CompressionMethod compressionMethod, long finalUnCompressedSizeBytes, long finalCompressedSizeBytes, 
             TimeSpan createTime, TimeSpan compressTime, TimeSpan CpuTime, double PeakCpuPercent, long PeakWorkingSetBytes, long? PeakManagedBytes, CancellationToken cancellationToken = default)
         {
             EnsureRunActive();
@@ -219,6 +220,7 @@ namespace FlexGuard.Core.Recording
             FlexBackupChunkEntry currentChunk = await _chunkEntryStore.GetByIdAsync(chunkEntryId, cancellationToken).ConfigureAwait(false) 
                 ?? throw new InvalidOperationException($"No chunk entry found with ChunkEntryId '{chunkEntryId}'.");
 
+            currentChunk.CompressionMethod = compressionMethod;
             currentChunk.EndDateTimeUtc = endUtc;
             currentChunk.RunTimeMs = (long)runTime.TotalMilliseconds;
             currentChunk.CreateTimeMs = (long)createTime.TotalMilliseconds;
@@ -253,7 +255,7 @@ namespace FlexGuard.Core.Recording
         /// Record that we processed a file into a given chunk.
         /// Creates a FlexBackupFileEntry row and updates in-memory totals.
         /// </summary>
-        public async Task RecordFileAsync(string chunkEntryId,string relativePath,string fileHash,long originalFileSizeBytes,long compressedFileSizeBytes, 
+        public async Task RecordFileAsync(string chunkEntryId,string relativePath,string fileHash, CompressionMethod compressionMethod, long originalFileSizeBytes,long compressedFileSizeBytes, 
             DateTimeOffset lastWriteTimeUtc, DateTimeOffset fileProcessStartUtc, DateTimeOffset fileProcessEndUtc,TimeSpan CreateTimeMs,
             TimeSpan CpuTime, double PeakCpuPercent, long PeakWorkingSetBytes, long? PeakManagedBytes,
             CancellationToken cancellationToken = default)
@@ -283,6 +285,7 @@ namespace FlexGuard.Core.Recording
             {
                 BackupEntryId = _currentBackupEntryId!,
                 ChunkEntryId = chunkEntryId,
+                CompressionMethod = compressionMethod,
 
                 Status = RunStatus.Completed,
                 StatusMessage = "Completed",
@@ -309,6 +312,29 @@ namespace FlexGuard.Core.Recording
             };
 
             await _fileEntryStore.InsertAsync(fileRow, cancellationToken).ConfigureAwait(false);
+        }
+        public async Task<FlexBackupChunkEntry?> RestoreGetFlexBackupChunkEntryById(string chunkEntryId)
+        {
+            FlexBackupChunkEntry? entry = await _chunkEntryStore.GetByIdAsync(chunkEntryId).ConfigureAwait(false);
+            return entry;
+        }
+        public async Task<FlexBackupEntry?> RestoreGetFlexBackupEntryForBackupEntryId(string backupEntryId)
+        {
+            FlexBackupEntry? entry = await _backupEntryStore.GetByIdAsync(backupEntryId).ConfigureAwait(false);
+
+            return entry;
+        }
+
+        public async Task<List<FlexBackupEntry>?> RestoreGetFlexBackupEntryForJobName(string jobName)
+        {
+            List<FlexBackupEntry>? entries = await _backupEntryStore.GetByJobNameAsync(jobName).ConfigureAwait(false);
+
+            return entries;
+        }
+        public async Task<List<FlexBackupFileEntry>?> RestoreGetFlexBackupFileEntryForBackupEntryId(string backupEntryId)
+        {
+            List<FlexBackupFileEntry>? entries = await _fileEntryStore.GetBybackupEntryIdAsync(backupEntryId).ConfigureAwait(false);
+            return entries;
         }
 
         /// <summary>

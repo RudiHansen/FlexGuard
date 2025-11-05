@@ -183,20 +183,21 @@ namespace FlexGuard.Data.Repositories.Sqlite
 
             var ddl = """
             CREATE TABLE IF NOT EXISTS FlexBackupEntry (
-              BackupEntryId         TEXT    NOT NULL PRIMARY KEY,
-              JobName               TEXT    NOT NULL CHECK(length(JobName) <= 50),
-              OperationMode         INTEGER NOT NULL,
-              CompressionMethod     INTEGER NOT NULL,
-              Status                INTEGER NOT NULL,
-              StatusMessage         TEXT    NULL CHECK(length(StatusMessage) <= 255),
-              StartDateTimeUtc      TEXT    NOT NULL,
-              EndDateTimeUtc        TEXT    NULL,
-              RunTimeMs             INTEGER NOT NULL CHECK(RunTimeMs >= 0),
-              TotalFiles            INTEGER NOT NULL CHECK(TotalFiles >= 0),
-              TotalGroups           INTEGER NOT NULL CHECK(TotalGroups >= 0),
-              TotalBytes            INTEGER NOT NULL CHECK(TotalBytes >= 0),
-              TotalBytesCompressed  INTEGER NOT NULL CHECK(TotalBytesCompressed >= 0),
-              CompressionRatio      REAL    NOT NULL CHECK(CompressionRatio >= 0)
+              BackupEntryId             TEXT    NOT NULL PRIMARY KEY, -- ULID(26)
+              JobName                   TEXT    NOT NULL CHECK(length(JobName) <= 50),
+              DestinationBackupFolder   TEXT    NOT NULL CHECK(length(DestinationBackupFolder) <= 255),
+              OperationMode             INTEGER NOT NULL,
+              CompressionMethod         INTEGER NOT NULL,
+              Status                    INTEGER NOT NULL,
+              StatusMessage             TEXT    NULL CHECK(length(StatusMessage) <= 255),
+              StartDateTimeUtc          TEXT    NOT NULL,
+              EndDateTimeUtc            TEXT    NULL,
+              RunTimeMs                 INTEGER NOT NULL CHECK(RunTimeMs >= 0),
+              TotalFiles                INTEGER NOT NULL CHECK(TotalFiles >= 0),
+              TotalChunks               INTEGER NOT NULL CHECK(TotalChunks >= 0),
+              TotalBytes                INTEGER NOT NULL CHECK(TotalBytes >= 0),
+              TotalBytesCompressed      INTEGER NOT NULL CHECK(TotalBytesCompressed >= 0),
+              CompressionRatio          REAL    NOT NULL CHECK(CompressionRatio >= 0)
             );
 
             CREATE TABLE IF NOT EXISTS FlexBackupChunkEntry (
@@ -211,7 +212,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               CreateTimeMs          INTEGER NOT NULL CHECK(CreateTimeMs >= 0),
               CompressTimeMs        INTEGER NOT NULL CHECK(CompressTimeMs >= 0),
               ChunkFileName         TEXT    NOT NULL CHECK(length(ChunkFileName) <= 50),
-              ChunkHash             TEXT    NOT NULL CHECK(length(ChunkHash) = 64),
+              ChunkHash             TEXT    NOT NULL CHECK(length(ChunkHash) <= 64),
               FileSize              INTEGER NOT NULL CHECK(FileSize >= 0),
               FileSizeCompressed    INTEGER NOT NULL CHECK(FileSizeCompressed >= 0),
               CpuTimeMs             INTEGER NOT NULL CHECK(CpuTimeMs >= 0),
@@ -224,6 +225,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               FileEntryId           TEXT    NOT NULL PRIMARY KEY,
               ChunkEntryId          TEXT    NOT NULL,
               BackupEntryId         TEXT    NOT NULL,
+              CompressionMethod     INTEGER NOT NULL,
               Status                INTEGER NOT NULL,
               StatusMessage         TEXT    NULL CHECK(length(StatusMessage) <= 255),
               StartDateTimeUtc      TEXT    NOT NULL,
@@ -233,7 +235,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               CompressTimeMs        INTEGER NOT NULL CHECK(CompressTimeMs >= 0),
               RelativePath          TEXT    NOT NULL CHECK(length(RelativePath) <= 512),
               LastWriteTimeUtc      TEXT    NOT NULL,
-              FileHash              TEXT    NOT NULL CHECK(length(FileHash) = 64),
+              FileHash              TEXT    NOT NULL CHECK(length(FileHash) <= 64),
               FileSize              INTEGER NOT NULL CHECK(FileSize >= 0),
               FileSizeCompressed    INTEGER NOT NULL CHECK(FileSizeCompressed >= 0),
               CpuTimeMs             INTEGER NOT NULL CHECK(CpuTimeMs >= 0),

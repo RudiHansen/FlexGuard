@@ -1,9 +1,10 @@
-﻿using System.Data;
-using Dapper;
-using Microsoft.Data.Sqlite;
+﻿using Dapper;
 using FlexGuard.Core.Abstractions;
 using FlexGuard.Core.Models;
 using FlexGuard.Data.Infrastructure;
+using Microsoft.Data.Sqlite;
+using System.Data;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FlexGuard.Data.Repositories.Sqlite
 {
@@ -36,7 +37,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
             using var conn = await OpenAsync(ct);
 
             var sql = """
-                      SELECT BackupEntryId, JobName, OperationMode, CompressionMethod,
+                      SELECT BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
                              Status, StatusMessage,
                              StartDateTimeUtc, EndDateTimeUtc,
                              RunTimeMs,
@@ -57,7 +58,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
             using var conn = await OpenAsync(ct);
 
             var sql = """
-                      SELECT BackupEntryId, JobName, OperationMode, CompressionMethod,
+                      SELECT BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
                              Status, StatusMessage,
                              StartDateTimeUtc, EndDateTimeUtc,
                              RunTimeMs,
@@ -69,6 +70,27 @@ namespace FlexGuard.Data.Repositories.Sqlite
 
             return await conn.QuerySingleOrDefaultAsync<FlexBackupEntry>(
                 new CommandDefinition(sql, new { BackupEntryId = backupEntryId }, cancellationToken: ct));
+        }
+        public async Task<List<FlexBackupEntry>?> GetByJobNameAsync(string jobName, CancellationToken ct = default)
+        {
+            await EnsureSchemaAsync(ct);
+            using var conn = await OpenAsync(ct);
+
+            var sql = """
+                      SELECT BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
+                             Status, StatusMessage,
+                             StartDateTimeUtc, EndDateTimeUtc,
+                             RunTimeMs,
+                             TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
+                             CompressionRatio
+                      FROM FlexBackupEntry
+                      WHERE JobName = @JobName
+                      ORDER BY StartDateTimeUtc DESC;
+                      """;
+
+            var rows = await conn.QueryAsync<FlexBackupEntry>(
+                new CommandDefinition(sql, new { JobName = jobName },cancellationToken: ct));
+            return rows.ToList();
         }
 
         public async Task InsertAsync(FlexBackupEntry row, CancellationToken ct = default)
@@ -88,14 +110,14 @@ namespace FlexGuard.Data.Repositories.Sqlite
 
             var sql = """
                       INSERT INTO FlexBackupEntry
-                        (BackupEntryId, JobName, OperationMode, CompressionMethod,
+                        (BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
                          Status, StatusMessage,
                          StartDateTimeUtc, EndDateTimeUtc,
                          RunTimeMs,
                          TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
                          CompressionRatio)
                       VALUES
-                        (@BackupEntryId, @JobName, @OperationMode, @CompressionMethod,
+                        (@BackupEntryId, @JobName, @DestinationBackupFolder, @OperationMode, @CompressionMethod,
                          @Status, @StatusMessage,
                          @StartDateTimeUtc, @EndDateTimeUtc,
                          @RunTimeMs,
@@ -115,6 +137,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
             var sql = """
                       UPDATE FlexBackupEntry
                       SET JobName=@JobName,
+                          DestinationBackupFolder=@DestinationBackupFolder,
                           OperationMode=@OperationMode,
                           CompressionMethod=@CompressionMethod,
                           Status=@Status,
@@ -148,6 +171,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
         private static void Validate(FlexBackupEntry e)
         {
             EnsureMax(e.JobName, FlexBackupLimits.JobNameMax, nameof(e.JobName));
+            EnsureMax(e.DestinationBackupFolder, FlexBackupLimits.DestinationBackupFolderMax, nameof(e.DestinationBackupFolder));
             EnsureMax(e.StatusMessage, FlexBackupLimits.StatusMessageMax, nameof(e.StatusMessage));
         }
         private static void EnsureMax(string? value, int max, string fieldName)
@@ -164,20 +188,21 @@ namespace FlexGuard.Data.Repositories.Sqlite
 
             var ddl = """
             CREATE TABLE IF NOT EXISTS FlexBackupEntry (
-              BackupEntryId         TEXT    NOT NULL PRIMARY KEY, -- ULID(26)
-              JobName               TEXT    NOT NULL CHECK(length(JobName) <= 50),
-              OperationMode         INTEGER NOT NULL,
-              CompressionMethod     INTEGER NOT NULL,
-              Status                INTEGER NOT NULL,
-              StatusMessage         TEXT    NULL CHECK(length(StatusMessage) <= 255),
-              StartDateTimeUtc      TEXT    NOT NULL,
-              EndDateTimeUtc        TEXT    NULL,
-              RunTimeMs             INTEGER NOT NULL CHECK(RunTimeMs >= 0),
-              TotalFiles            INTEGER NOT NULL CHECK(TotalFiles >= 0),
-              TotalChunks           INTEGER NOT NULL CHECK(TotalChunks >= 0),
-              TotalBytes            INTEGER NOT NULL CHECK(TotalBytes >= 0),
-              TotalBytesCompressed  INTEGER NOT NULL CHECK(TotalBytesCompressed >= 0),
-              CompressionRatio      REAL    NOT NULL CHECK(CompressionRatio >= 0)
+              BackupEntryId             TEXT    NOT NULL PRIMARY KEY, -- ULID(26)
+              JobName                   TEXT    NOT NULL CHECK(length(JobName) <= 50),
+              DestinationBackupFolder   TEXT    NOT NULL CHECK(length(DestinationBackupFolder) <= 255),
+              OperationMode             INTEGER NOT NULL,
+              CompressionMethod         INTEGER NOT NULL,
+              Status                    INTEGER NOT NULL,
+              StatusMessage             TEXT    NULL CHECK(length(StatusMessage) <= 255),
+              StartDateTimeUtc          TEXT    NOT NULL,
+              EndDateTimeUtc            TEXT    NULL,
+              RunTimeMs                 INTEGER NOT NULL CHECK(RunTimeMs >= 0),
+              TotalFiles                INTEGER NOT NULL CHECK(TotalFiles >= 0),
+              TotalChunks               INTEGER NOT NULL CHECK(TotalChunks >= 0),
+              TotalBytes                INTEGER NOT NULL CHECK(TotalBytes >= 0),
+              TotalBytesCompressed      INTEGER NOT NULL CHECK(TotalBytesCompressed >= 0),
+              CompressionRatio          REAL    NOT NULL CHECK(CompressionRatio >= 0)
             );
 
             CREATE TABLE IF NOT EXISTS FlexBackupChunkEntry (
@@ -205,6 +230,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               FileEntryId           TEXT    NOT NULL PRIMARY KEY,
               ChunkEntryId          TEXT    NOT NULL,
               BackupEntryId         TEXT    NOT NULL,
+              CompressionMethod     INTEGER NOT NULL,
               Status                INTEGER NOT NULL,
               StatusMessage         TEXT    NULL CHECK(length(StatusMessage) <= 255),
               StartDateTimeUtc      TEXT    NOT NULL,

@@ -22,9 +22,6 @@ public static class BackupExecutor
     {
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
 
-        var recorder = Services.Get<BackupRunRecorder>();
-        await recorder.StartRunAsync(options.JobName, options.Mode, options.Compression);
-
         DateTime? lastBackupTime = null;
 
         if (options.Mode == Core.Options.OperationMode.DifferentialBackup)
@@ -35,6 +32,10 @@ public static class BackupExecutor
 
         var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
         registryManager.Save();
+
+        // Create the start record for the BackupJob in FlexBackupEntry
+        var recorder = Services.Get<BackupRunRecorder>();
+        await recorder.StartRunAsync(options.JobName, backupEntry.DestinationFolderName, options.Mode, options.Compression);
 
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
         var totalSize = allFiles.Sum(f => f.FileSize);
@@ -85,7 +86,6 @@ public static class BackupExecutor
                   Path.Combine(backupFolderPath, $"registry_{options.JobName}.json"), true);
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, hashManifestFileName),
                   Path.Combine(backupFolderPath, hashManifestFileName),true);
-
         await recorder.CompleteRunAsync(RunStatus.Completed);
 
         reporter.Success("Backup process completed successfully.");

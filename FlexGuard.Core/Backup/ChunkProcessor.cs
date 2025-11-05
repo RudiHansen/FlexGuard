@@ -42,6 +42,7 @@ public static class ChunkProcessor
             string chunkEntryId = await recorder.StartChunkAsync(chunkFileName, fileManifestBuilder.Compression, group.Index);
 
             using var meterChunk = ResourceUsageMeter.Start();
+            CompressionMethod actualChunkCompressionMethod = fileManifestBuilder.Compression;
             TimeSpan timerChunkCreateElapsed;
 
             // ---- Inner scope: create and write the zip archive (ensure dispose before reading it) ----
@@ -93,6 +94,7 @@ public static class ChunkProcessor
                             chunkEntryId,
                             file.RelativePath,
                             hash,
+                            CompressionMethod.None,
                             file.FileSize,
                             file.FileSize, // (inner zip is uncompressed; outer compression happens afterward)
                             file.LastWriteTimeUtc,
@@ -125,12 +127,14 @@ public static class ChunkProcessor
             if (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible)
             {
                 File.Copy(tempZipPath, outputPath, overwrite: true);
+                actualChunkCompressionMethod = CompressionMethod.None;
             }
             else
             {
                 using var zipInput = new FileStream(tempZipPath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None);
                 compressor.Compress(zipInput, outStream);
+                actualChunkCompressionMethod = fileManifestBuilder.Compression;
             }
 
             chunkHash = HashHelper.ComputeHash(outputPath);
@@ -151,6 +155,7 @@ public static class ChunkProcessor
             await recorder.CompleteChunkAsync(
                 chunkEntryId,
                 chunkHash,
+                actualChunkCompressionMethod,
                 originalSize,
                 compressedSize,
                 createTime,

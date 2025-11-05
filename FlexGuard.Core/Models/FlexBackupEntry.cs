@@ -12,6 +12,7 @@ namespace FlexGuard.Core.Models
         // ULID primary key
         public string BackupEntryId { get; init; } = Ulid.NewUlid().ToString();
         public required string JobName { get; init; }
+        public required string DestinationBackupFolder { get; init; }
         public OperationMode OperationMode { get; init; } = OperationMode.FullBackup;
         public CompressionMethod CompressionMethod { get; init; } = CompressionMethod.Zstd;
         public RunStatus Status { get; set; } = RunStatus.Running;

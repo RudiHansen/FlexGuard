@@ -1,4 +1,5 @@
-﻿using Spectre.Console;
+﻿using FlexGuard.Core.Models;
+using Spectre.Console;
 
 namespace FlexGuard.CLI.Restore;
 
@@ -15,7 +16,7 @@ public static class DirectoryViewSelector
     /// Supports filtering, select-all, and clear-all operations.
     /// Returns the final list of selected files.
     /// </summary>
-    public static List<string> Show(List<string> allFiles)
+    public static List<FlexBackupFileEntry> Show(List<FlexBackupFileEntry> allFiles)
     {
         var root = BuildDirectoryTree(allFiles);
         var selectedItems = new HashSet<string>();
@@ -156,8 +157,13 @@ public static class DirectoryViewSelector
                 finalSelection.Add(item);
             }
         }
+        var returnList = new List<FlexBackupFileEntry>();
+        foreach (var item in finalSelection)
+        {
+            returnList.Add(allFiles.First(f => f.RelativePath == item));
+        }
 
-        return finalSelection.OrderBy(x => x).ToList();
+        return returnList;
     }
 
 
@@ -231,12 +237,12 @@ public static class DirectoryViewSelector
         public List<string> Files { get; } = new();
     }
 
-    private static DirNode BuildDirectoryTree(List<string> allFiles)
+    private static DirNode BuildDirectoryTree(List<FlexBackupFileEntry> allFiles)
     {
         var root = new DirNode { Name = "" };
-        foreach (var filePath in allFiles)
+        foreach (var oneFile in allFiles)
         {
-            var parts = filePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var parts = oneFile.RelativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             var current = root;
 
             for (int i = 0; i < parts.Length; i++)
@@ -244,7 +250,7 @@ public static class DirectoryViewSelector
                 var part = parts[i];
                 if (i == parts.Length - 1)
                 {
-                    current.Files.Add(filePath);
+                    current.Files.Add(oneFile.RelativePath);
                 }
                 else
                 {

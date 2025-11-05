@@ -2,6 +2,7 @@
 {
     public enum CompressionMethod
     {
+        None,
         GZip,
         Brotli,
         Zstd

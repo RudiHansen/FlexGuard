@@ -26,7 +26,12 @@ namespace FlexGuard.Data.Repositories.Json
             try { return (await ReadAsync(ct)).FirstOrDefault(x => x.FileEntryId == fileEntryId); }
             finally { _gate.Release(); }
         }
-
+        public async Task<List<FlexBackupFileEntry>?> GetBybackupEntryIdAsync(string backupEntryId, CancellationToken ct = default)
+        {
+            await _gate.WaitAsync(ct);
+            try { return (await ReadAsync(ct)).Where(x => x.BackupEntryId == backupEntryId).ToList(); }
+            finally { _gate.Release(); }
+        }
         public async Task InsertAsync(FlexBackupFileEntry row, CancellationToken ct = default)
         {
             Validate(row);

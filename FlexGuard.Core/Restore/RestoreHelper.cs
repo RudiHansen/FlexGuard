@@ -46,7 +46,7 @@ public static class RestoreHelper
             using var chunkStream = new FileStream(chunkFilePath, FileMode.Open, FileAccess.Read);
             using var decompressedStream = new MemoryStream();
 
-            if (compressionSkipped)
+            if (compressionMethod == CompressionMethod.None)
             {
                 chunkStream.CopyTo(decompressedStream);
             }

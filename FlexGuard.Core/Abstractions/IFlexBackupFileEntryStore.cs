@@ -6,6 +6,7 @@ namespace FlexGuard.Core.Abstractions
     {
         Task<IReadOnlyList<FlexBackupFileEntry>> GetAllAsync(CancellationToken ct = default);
         Task<FlexBackupFileEntry?> GetByIdAsync(string fileEntryId, CancellationToken ct = default);
+        Task<List<FlexBackupFileEntry>?> GetBybackupEntryIdAsync(string backupEntryId, CancellationToken ct = default);
 
         Task InsertAsync(FlexBackupFileEntry row, CancellationToken ct = default);
         Task UpdateAsync(FlexBackupFileEntry row, CancellationToken ct = default);

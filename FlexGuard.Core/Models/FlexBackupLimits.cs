@@ -4,6 +4,7 @@
     {
         public const int UlidLen = 26;
         public const int JobNameMax = 50;
+        public const int DestinationBackupFolderMax = 255;
         public const int StatusMessageMax = 255;
         public const int ChunkFileNameMax = 50;
         public const int RelativePathMax = 512;

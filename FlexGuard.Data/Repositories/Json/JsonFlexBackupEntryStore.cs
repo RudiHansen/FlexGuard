@@ -26,6 +26,12 @@ namespace FlexGuard.Data.Repositories.Json
             try { return (await ReadAsync(ct)).FirstOrDefault(x => x.BackupEntryId == backupEntryId); }
             finally { _gate.Release(); }
         }
+        public async Task<List<FlexBackupEntry>?> GetByJobNameAsync(string jobName, CancellationToken ct = default)
+        {
+            await _gate.WaitAsync(ct);
+            try { return (await ReadAsync(ct)).Where(x => x.JobName == jobName).ToList(); }
+            finally { _gate.Release(); }
+        }
 
         public async Task InsertAsync(FlexBackupEntry row, CancellationToken ct = default)
         {
@@ -78,6 +84,7 @@ namespace FlexGuard.Data.Repositories.Json
         private static void Validate(FlexBackupEntry e)
         {
             EnsureMax(e.JobName, FlexBackupLimits.JobNameMax, nameof(e.JobName));
+            EnsureMax(e.DestinationBackupFolder, FlexBackupLimits.DestinationBackupFolderMax, nameof(e.DestinationBackupFolder));
             EnsureMax(e.StatusMessage, FlexBackupLimits.StatusMessageMax, nameof(e.StatusMessage));
         }
         private static void EnsureMax(string? value, int max, string fieldName)
