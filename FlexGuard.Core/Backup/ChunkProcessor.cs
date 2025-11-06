@@ -1,5 +1,6 @@
 ﻿using FlexGuard.Core.Compression;
 using FlexGuard.Core.Manifest;
+using FlexGuard.Core.Options;
 using FlexGuard.Core.Recording;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
@@ -13,8 +14,7 @@ public static class ChunkProcessor
         FileGroup group,
         string backupFolderPath,
         IMessageReporter reporter,
-        FileManifestBuilder fileManifestBuilder,
-        HashManifestBuilder hashManifestBuilder,
+        ProgramOptions options,
         BackupRunRecorder recorder)
     {
         var chunkFileName = $"{group.Index:D4}.fgchunk";
@@ -26,7 +26,7 @@ public static class ChunkProcessor
         var zipCompressionLevel = CompressionLevel.NoCompression;
 
         // Select outer compressor based on the manifest (GZip, Brotli, Zstd)
-        var compressor = CompressorFactory.Create(fileManifestBuilder.Compression);
+        var compressor = CompressorFactory.Create(options.Compression);
 
         // Step 1: Create temporary zip file path
         var tempZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -39,10 +39,10 @@ public static class ChunkProcessor
 
         try
         {
-            string chunkEntryId = await recorder.StartChunkAsync(chunkFileName, fileManifestBuilder.Compression, group.Index);
+            string chunkEntryId = await recorder.StartChunkAsync(chunkFileName, options.Compression, group.Index);
 
             using var meterChunk = ResourceUsageMeter.Start();
-            CompressionMethod actualChunkCompressionMethod = fileManifestBuilder.Compression;
+            CompressionMethod actualChunkCompressionMethod = options.Compression;
             TimeSpan timerChunkCreateElapsed;
 
             // ---- Inner scope: create and write the zip archive (ensure dispose before reading it) ----
@@ -71,17 +71,6 @@ public static class ChunkProcessor
                         var entry = archive.CreateEntry(file.RelativePath, zipCompressionLevel);
                         using var entryStream = entry.Open();
                         sourceStream.CopyTo(entryStream);
-
-                        fileManifestBuilder.AddFile(new FileEntry
-                        {
-                            RelativePath = file.RelativePath,
-                            Hash = hash,
-                            ChunkFile = chunkFileName,
-                            FileSize = file.FileSize,
-                            LastWriteTimeUtc = file.LastWriteTimeUtc,
-                            CompressionSkipped = (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible),
-                            CompressionRatio = 0
-                        });
 
                         DateTimeOffset fileProcessEndUtc = DateTimeOffset.UtcNow;
 
@@ -150,17 +139,10 @@ public static class ChunkProcessor
                 using var zipInput = new FileStream(tempZipPath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None);
                 compressor.Compress(zipInput, outStream);
-                actualChunkCompressionMethod = fileManifestBuilder.Compression;
+                actualChunkCompressionMethod = options.Compression;
             }
 
             chunkHash = HashHelper.ComputeHash(outputPath);
-            hashManifestBuilder.AddChunk(new ChunkHashEntry
-            {
-                ChunkFile = chunkFileName,
-                Hash = chunkHash,
-                SizeBytes = new FileInfo(outputPath).Length
-            });
-
             compressedSize = new FileInfo(outputPath).Length;
 
             timerChunkCompress.Stop();

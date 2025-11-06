@@ -5,7 +5,6 @@ using FlexGuard.Core.Config;
 using FlexGuard.Core.Models;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Recording;
-using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Restore;
 using FlexGuard.Core.Util;

@@ -4,7 +4,6 @@ using FlexGuard.Core.Config;
 using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Models;
 using FlexGuard.Core.Recording;
-using FlexGuard.Core.Registry;
 using Spectre.Console;
 using System.Text.Json;
 

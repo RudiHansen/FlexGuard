@@ -5,7 +5,6 @@ using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Models;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Recording;
-using FlexGuard.Core.Registry;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 using Spectre.Console;
@@ -17,7 +16,6 @@ public static class BackupExecutor
     public static async Task RunAsync(
         ProgramOptions options,
         BackupJobConfig jobConfig,
-        BackupRegistryManager registryManager,
         IMessageReporter reporter)
     {
         var recorder = Services.Get<BackupRunRecorder>();
@@ -39,8 +37,8 @@ public static class BackupExecutor
             }
         }
 
-        var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
-        registryManager.Save();
+        // We need DesitnationFolderName
+        string DestinationFolderName = $"{DateTime.UtcNow:yyyy-MM-ddTHHmm}_{GetShortType(options.Mode)}";
 
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
         if(allFiles.Count <= 0)
@@ -50,18 +48,13 @@ public static class BackupExecutor
         }
 
         // Create the start record for the BackupJob in FlexBackupEntry
-        await recorder.StartRunAsync(options.JobName, backupEntry.DestinationFolderName, options.Mode, options.Compression);
+        await recorder.StartRunAsync(options.JobName, DestinationFolderName, options.Mode, options.Compression);
 
         var totalSize = allFiles.Sum(f => f.FileSize);
 
         var fileGroups = FileGrouper.GroupFiles(allFiles, options.MaxFilesPerGroup, options.MaxBytesPerGroup);
 
-        var fileManifestBuilder = new FileManifestBuilder(
-            options.JobName, options.Mode, backupEntry.TimestampStart, options.Compression);
-
-        var hashManifestBuilder = new HashManifestBuilder(options.JobName, backupEntry.TimestampStart);
-
-        string backupFolderPath = Path.Combine(jobConfig.DestinationPath, backupEntry.DestinationFolderName);
+        string backupFolderPath = Path.Combine(jobConfig.DestinationPath, DestinationFolderName);
 
         reporter.Info($"Total: {allFiles.Count} files, {FormatHelper.FormatBytes(totalSize)}, {fileGroups.Count} group(s)");
 
@@ -84,24 +77,23 @@ public static class BackupExecutor
 
                 foreach (var group in fileGroups)
                 {
-                    ChunkProcessor.ProcessAsync(group, backupFolderPath, reporterWithProgress, fileManifestBuilder, hashManifestBuilder,recorder).GetAwaiter().GetResult();
+                    ChunkProcessor.ProcessAsync(group, backupFolderPath, reporterWithProgress ,options, recorder).GetAwaiter().GetResult();
                 }
             });
 
-        string fileManifestFileName = fileManifestBuilder.Save(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName));
-        string hashManifestFileName = hashManifestBuilder.Save(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName));
-
-        backupEntry.TimestampEnd = DateTime.UtcNow;
-        registryManager.Save();
-
-        File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, fileManifestFileName),
-                  Path.Combine(backupFolderPath, fileManifestFileName), true);
-        File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, $"registry_{options.JobName}.json"),
-                  Path.Combine(backupFolderPath, $"registry_{options.JobName}.json"), true);
-        File.Copy(Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName, hashManifestFileName),
-                  Path.Combine(backupFolderPath, hashManifestFileName),true);
         await recorder.CompleteRunAsync(RunStatus.Completed);
 
         reporter.Success("Backup process completed successfully.");
     }
+    private static string GetShortType(OperationMode operationMode)
+    {
+        return operationMode switch
+        {
+            OperationMode.FullBackup => "FULL",
+            OperationMode.DifferentialBackup => "DIFF",
+            OperationMode.Restore => "RESTORE",// Will proberly not be used, but added for completeness
+            _ => "ERROR",// If this used we have a problem
+        };
+    }
+
 }

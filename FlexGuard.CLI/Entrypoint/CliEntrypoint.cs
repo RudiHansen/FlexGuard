@@ -3,7 +3,6 @@ using FlexGuard.CLI.Options;
 using FlexGuard.CLI.Reporting;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Options;
-using FlexGuard.Core.Registry;
 
 namespace FlexGuard.CLI.Entrypoint;
 
@@ -18,8 +17,6 @@ public static class CliEntrypoint
         if (options == null) return;
 
         var jobConfig = JobLoader.Load(options.JobName);
-        var localJobsFolder = Path.Combine(AppContext.BaseDirectory, "Jobs", options.JobName);
-        var registry = new BackupRegistryManager(options.JobName, localJobsFolder);
 
         switch (options.Mode)
         {
@@ -29,7 +26,7 @@ public static class CliEntrypoint
 
             case OperationMode.FullBackup:
             case OperationMode.DifferentialBackup:
-                await BackupExecutor.RunAsync(options, jobConfig, registry, reporter);
+                await BackupExecutor.RunAsync(options, jobConfig, reporter);
                 break;
         }
     }
