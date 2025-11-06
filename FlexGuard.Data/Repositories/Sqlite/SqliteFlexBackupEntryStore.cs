@@ -92,6 +92,24 @@ namespace FlexGuard.Data.Repositories.Sqlite
                 new CommandDefinition(sql, new { JobName = jobName },cancellationToken: ct));
             return rows.ToList();
         }
+        public async Task<DateTimeOffset?> GetLastJobRunTime(string jobName, CancellationToken ct = default)
+        {
+            await EnsureSchemaAsync(ct);
+            using var conn = await OpenAsync(ct);
+
+            var sql = """
+              SELECT StartDateTimeUtc
+              FROM FlexBackupEntry
+              WHERE JobName = @JobName
+              ORDER BY StartDateTimeUtc DESC
+              LIMIT 1;
+              """;
+
+            var result = await conn.QueryFirstOrDefaultAsync<DateTimeOffset?>(
+                new CommandDefinition(sql, new { JobName = jobName }, cancellationToken: ct));
+
+            return result;
+        }
 
         public async Task InsertAsync(FlexBackupEntry row, CancellationToken ct = default)
         {

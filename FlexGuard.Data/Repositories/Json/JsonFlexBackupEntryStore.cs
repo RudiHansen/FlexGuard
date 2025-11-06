@@ -32,6 +32,25 @@ namespace FlexGuard.Data.Repositories.Json
             try { return (await ReadAsync(ct)).Where(x => x.JobName == jobName).ToList(); }
             finally { _gate.Release(); }
         }
+        public async Task<DateTimeOffset?> GetLastJobRunTime(string jobName, CancellationToken ct = default)
+        {
+            await _gate.WaitAsync(ct);
+            try
+            {
+                var entries = await ReadAsync(ct);
+
+                var lastEntry = entries
+                    .Where(x => string.Equals(x.JobName, jobName, StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(x => x.StartDateTimeUtc)
+                    .FirstOrDefault();
+
+                return lastEntry?.StartDateTimeUtc;
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
 
         public async Task InsertAsync(FlexBackupEntry row, CancellationToken ct = default)
         {

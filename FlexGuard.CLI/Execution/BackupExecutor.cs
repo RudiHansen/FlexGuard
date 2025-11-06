@@ -20,14 +20,23 @@ public static class BackupExecutor
         BackupRegistryManager registryManager,
         IMessageReporter reporter)
     {
+        var recorder = Services.Get<BackupRunRecorder>();
         reporter.Info($"Selected Job: {options.JobName}, Operation Mode: {options.Mode}, Compression: {options.Compression}");
 
         DateTime? lastBackupTime = null;
 
         if (options.Mode == Core.Options.OperationMode.DifferentialBackup)
         {
-            var lastBackupEntry = registryManager.GetLatestEntry();
-            lastBackupTime = lastBackupEntry?.TimestampStart;
+            DateTimeOffset? lastDateTimeOffset = await recorder.GetLastJobRunTime(options.JobName);
+            if(lastDateTimeOffset is not null)
+            {
+                lastBackupTime = lastDateTimeOffset.Value.UtcDateTime;
+            }
+            else
+            {
+                reporter.Error("No last backup record found");
+                return;
+            }
         }
 
         var backupEntry = registryManager.AddEntry(DateTime.UtcNow, options.Mode);
@@ -41,7 +50,6 @@ public static class BackupExecutor
         }
 
         // Create the start record for the BackupJob in FlexBackupEntry
-        var recorder = Services.Get<BackupRunRecorder>();
         await recorder.StartRunAsync(options.JobName, backupEntry.DestinationFolderName, options.Mode, options.Compression);
 
         var totalSize = allFiles.Sum(f => f.FileSize);

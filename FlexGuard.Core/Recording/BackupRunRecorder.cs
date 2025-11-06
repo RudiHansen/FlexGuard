@@ -336,6 +336,10 @@ namespace FlexGuard.Core.Recording
             List<FlexBackupFileEntry>? entries = await _fileEntryStore.GetBybackupEntryIdAsync(backupEntryId).ConfigureAwait(false);
             return entries;
         }
+        public async Task<DateTimeOffset?> GetLastJobRunTime(string jobName)
+        {
+            return await _backupEntryStore.GetLastJobRunTime(jobName).ConfigureAwait(false);
+        }
 
         /// <summary>
         /// Helper to guard methods that require an active run.
