@@ -62,14 +62,14 @@ public static class BackupExecutor
 
         reporter.Info($"Total: {allFiles.Count} files, {FormatHelper.FormatBytes(totalSize)}, {fileGroups.Count} group(s)");
 
-        AnsiConsole.Progress()
+        await AnsiConsole.Progress()
             .AutoClear(false)
             .HideCompleted(false)
             .Columns(
                 new TaskDescriptionColumn(),
                 new ProgressBarColumn(),
                 new PercentageColumn())
-            .Start(ctx =>
+            .Start(async ctx =>
             {
                 var task = ctx.AddTask("Backing up files...", maxValue: totalSize);
 
@@ -81,7 +81,7 @@ public static class BackupExecutor
 
                 foreach (var group in fileGroups)
                 {
-                    ChunkProcessor.ProcessAsync(group, backupFolderPath, reporterWithProgress ,options, recorder).GetAwaiter().GetResult();
+                    await ChunkProcessor.ProcessAsync(group, backupFolderPath, reporterWithProgress ,options, recorder);
                 }
             });
 
