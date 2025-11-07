@@ -10,7 +10,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
     public sealed class SqliteFlexBackupFileEntryStore : IFlexBackupFileEntryStore
     {
         private readonly string _cs;
-        private bool _schemaReady;
+        private static readonly SemaphoreSlim _writeGate = new(1, 1);
 
         static SqliteFlexBackupFileEntryStore()
         {
@@ -103,89 +103,114 @@ namespace FlexGuard.Data.Repositories.Sqlite
 
         public async Task InsertAsync(FlexBackupFileEntry row, CancellationToken ct = default)
         {
-            Validate(row);
-            await EnsureSchemaAsync(ct);
-            using var conn = await OpenAsync(ct);
+            await _writeGate.WaitAsync(ct);
+            try
+            {
+                Validate(row);
+                await EnsureSchemaAsync(ct);
+                using var conn = await OpenAsync(ct);
 
-            var exists = await conn.ExecuteScalarAsync<int>(
-                new CommandDefinition(
-                    "SELECT 1 FROM FlexBackupFileEntry WHERE FileEntryId=@FileEntryId;",
-                    new { row.FileEntryId },
-                    cancellationToken: ct));
+                var exists = await conn.ExecuteScalarAsync<int>(
+                    new CommandDefinition(
+                        "SELECT 1 FROM FlexBackupFileEntry WHERE FileEntryId=@FileEntryId;",
+                        new { row.FileEntryId },
+                        cancellationToken: ct));
 
-            if (exists == 1)
-                throw new InvalidOperationException($"FileEntry {row.FileEntryId} already exists.");
+                if (exists == 1)
+                    throw new InvalidOperationException($"FileEntry {row.FileEntryId} already exists.");
 
-            var sql = """
-                      INSERT INTO FlexBackupFileEntry
-                        (FileEntryId, ChunkEntryId, BackupEntryId,CompressionMethod,
-                         Status, StatusMessage,
-                         StartDateTimeUtc, EndDateTimeUtc,
-                         RunTimeMs, CreateTimeMs, CompressTimeMs,
-                         RelativePath, LastWriteTimeUtc,
-                         FileHash,
-                         FileSize, FileSizeCompressed,
-                         CpuTimeMs, CpuPercent,
-                         MemoryStart, MemoryEnd)
-                      VALUES
-                        (@FileEntryId, @ChunkEntryId, @BackupEntryId, @CompressionMethod,
-                         @Status, @StatusMessage,
-                         @StartDateTimeUtc, @EndDateTimeUtc,
-                         @RunTimeMs, @CreateTimeMs, @CompressTimeMs,
-                         @RelativePath, @LastWriteTimeUtc,
-                         @FileHash,
-                         @FileSize, @FileSizeCompressed,
-                         @CpuTimeMs, @CpuPercent,
-                         @MemoryStart, @MemoryEnd);
-                      """;
+                var sql = """
+                          INSERT INTO FlexBackupFileEntry
+                            (FileEntryId, ChunkEntryId, BackupEntryId,CompressionMethod,
+                             Status, StatusMessage,
+                             StartDateTimeUtc, EndDateTimeUtc,
+                             RunTimeMs, CreateTimeMs, CompressTimeMs,
+                             RelativePath, LastWriteTimeUtc,
+                             FileHash,
+                             FileSize, FileSizeCompressed,
+                             CpuTimeMs, CpuPercent,
+                             MemoryStart, MemoryEnd)
+                          VALUES
+                            (@FileEntryId, @ChunkEntryId, @BackupEntryId, @CompressionMethod,
+                             @Status, @StatusMessage,
+                             @StartDateTimeUtc, @EndDateTimeUtc,
+                             @RunTimeMs, @CreateTimeMs, @CompressTimeMs,
+                             @RelativePath, @LastWriteTimeUtc,
+                             @FileHash,
+                             @FileSize, @FileSizeCompressed,
+                             @CpuTimeMs, @CpuPercent,
+                             @MemoryStart, @MemoryEnd);
+                          """;
 
-            await conn.ExecuteAsync(new CommandDefinition(sql, row, cancellationToken: ct));
+                await conn.ExecuteAsync(new CommandDefinition(sql, row, cancellationToken: ct));
+            }
+            finally
+            {
+                _writeGate.Release();
+            }
         }
 
         public async Task UpdateAsync(FlexBackupFileEntry row, CancellationToken ct = default)
         {
-            Validate(row);
-            await EnsureSchemaAsync(ct);
-            using var conn = await OpenAsync(ct);
+            await _writeGate.WaitAsync(ct);
+            try
+            {
+                Validate(row);
+                await EnsureSchemaAsync(ct);
+                using var conn = await OpenAsync(ct);
 
-            var sql = """
-                      UPDATE FlexBackupFileEntry
-                      SET ChunkEntryId=@ChunkEntryId,
-                          BackupEntryId=@BackupEntryId,
-                          Status=@Status,
-                          StatusMessage=@StatusMessage,
-                          StartDateTimeUtc=@StartDateTimeUtc,
-                          EndDateTimeUtc=@EndDateTimeUtc,
-                          RunTimeMs=@RunTimeMs,
-                          CreateTimeMs=@CreateTimeMs,
-                          CompressTimeMs=@CompressTimeMs,
-                          RelativePath=@RelativePath,
-                          LastWriteTimeUtc=@LastWriteTimeUtc,
-                          FileHash=@FileHash,
-                          FileSize=@FileSize,
-                          FileSizeCompressed=@FileSizeCompressed,
-                          CpuTimeMs=@CpuTimeMs,
-                          CpuPercent=@CpuPercent,
-                          MemoryStart=@MemoryStart,
-                          MemoryEnd=@MemoryEnd
-                      WHERE FileEntryId=@FileEntryId;
-                      """;
+                var sql = """
+                          UPDATE FlexBackupFileEntry
+                          SET ChunkEntryId=@ChunkEntryId,
+                              BackupEntryId=@BackupEntryId,
+                              Status=@Status,
+                              StatusMessage=@StatusMessage,
+                              StartDateTimeUtc=@StartDateTimeUtc,
+                              EndDateTimeUtc=@EndDateTimeUtc,
+                              RunTimeMs=@RunTimeMs,
+                              CreateTimeMs=@CreateTimeMs,
+                              CompressTimeMs=@CompressTimeMs,
+                              RelativePath=@RelativePath,
+                              LastWriteTimeUtc=@LastWriteTimeUtc,
+                              FileHash=@FileHash,
+                              FileSize=@FileSize,
+                              FileSizeCompressed=@FileSizeCompressed,
+                              CpuTimeMs=@CpuTimeMs,
+                              CpuPercent=@CpuPercent,
+                              MemoryStart=@MemoryStart,
+                              MemoryEnd=@MemoryEnd
+                          WHERE FileEntryId=@FileEntryId;
+                          """;
 
-            var n = await conn.ExecuteAsync(new CommandDefinition(sql, row, cancellationToken: ct));
-            if (n == 0)
-                throw new InvalidOperationException($"FileEntry {row.FileEntryId} not found.");
+                var n = await conn.ExecuteAsync(new CommandDefinition(sql, row, cancellationToken: ct));
+                if (n == 0)
+                    throw new InvalidOperationException($"FileEntry {row.FileEntryId} not found.");
+            }
+            finally
+            {
+                _writeGate.Release();
+            }
         }
 
         public async Task DeleteAsync(string fileEntryId, CancellationToken ct = default)
         {
-            await EnsureSchemaAsync(ct);
-            using var conn = await OpenAsync(ct);
+            await _writeGate.WaitAsync(ct);
+            try
+            {
+                await EnsureSchemaAsync(ct);
+                using var conn = await OpenAsync(ct);
 
-            await conn.ExecuteAsync(new CommandDefinition(
-                "DELETE FROM FlexBackupFileEntry WHERE FileEntryId=@FileEntryId;",
-                new { FileEntryId = fileEntryId },
-                cancellationToken: ct));
+                await conn.ExecuteAsync(new CommandDefinition(
+                    "DELETE FROM FlexBackupFileEntry WHERE FileEntryId=@FileEntryId;",
+                    new { FileEntryId = fileEntryId },
+                    cancellationToken: ct));
+            }
+            finally
+            {
+                _writeGate.Release();
+            }
         }
+
         private static void Validate(FlexBackupFileEntry e)
         {
             EnsureMax(e.ChunkEntryId, FlexBackupLimits.UlidLen, nameof(e.ChunkEntryId));
@@ -194,12 +219,14 @@ namespace FlexGuard.Data.Repositories.Sqlite
             EnsureMax(e.FileHash, FlexBackupLimits.HashHexLen, nameof(e.FileHash));
             EnsureMax(e.StatusMessage, FlexBackupLimits.StatusMessageMax, nameof(e.StatusMessage));
         }
+
         private static void EnsureMax(string? value, int max, string fieldName)
         {
-            if (value is null) return;            // null er ok
+            if (value is null) return;
             if (value.Length > max)
                 throw new ArgumentException($"{fieldName} length must be ≤ {max} characters.", fieldName);
         }
+
         private async Task EnsureSchemaAsync(CancellationToken ct)
         {
             await SqliteFlexBackupSchemaHelper.EnsureSchemaAsync(_cs, ct);

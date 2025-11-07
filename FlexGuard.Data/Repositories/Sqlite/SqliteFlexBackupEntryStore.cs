@@ -4,14 +4,13 @@ using FlexGuard.Core.Models;
 using FlexGuard.Data.Infrastructure;
 using Microsoft.Data.Sqlite;
 using System.Data;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FlexGuard.Data.Repositories.Sqlite
 {
     public sealed class SqliteFlexBackupEntryStore : IFlexBackupEntryStore
     {
         private readonly string _cs;
-        private bool _schemaReady;
+        private static readonly SemaphoreSlim _writeGate = new(1, 1);
 
         static SqliteFlexBackupEntryStore()
         {
@@ -71,6 +70,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
             return await conn.QuerySingleOrDefaultAsync<FlexBackupEntry>(
                 new CommandDefinition(sql, new { BackupEntryId = backupEntryId }, cancellationToken: ct));
         }
+
         public async Task<List<FlexBackupEntry>?> GetByJobNameAsync(string jobName, CancellationToken ct = default)
         {
             await EnsureSchemaAsync(ct);
@@ -89,9 +89,10 @@ namespace FlexGuard.Data.Repositories.Sqlite
                       """;
 
             var rows = await conn.QueryAsync<FlexBackupEntry>(
-                new CommandDefinition(sql, new { JobName = jobName },cancellationToken: ct));
+                new CommandDefinition(sql, new { JobName = jobName }, cancellationToken: ct));
             return rows.ToList();
         }
+
         public async Task<DateTimeOffset?> GetLastJobRunTime(string jobName, CancellationToken ct = default)
         {
             await EnsureSchemaAsync(ct);
@@ -113,92 +114,119 @@ namespace FlexGuard.Data.Repositories.Sqlite
 
         public async Task InsertAsync(FlexBackupEntry row, CancellationToken ct = default)
         {
-            Validate(row);
-            await EnsureSchemaAsync(ct);
-            using var conn = await OpenAsync(ct);
+            await _writeGate.WaitAsync(ct);
+            try
+            {
+                Validate(row);
+                await EnsureSchemaAsync(ct);
+                using var conn = await OpenAsync(ct);
 
-            var exists = await conn.ExecuteScalarAsync<int>(
-                new CommandDefinition(
-                    "SELECT 1 FROM FlexBackupEntry WHERE BackupEntryId=@BackupEntryId;",
-                    new { row.BackupEntryId },
-                    cancellationToken: ct));
+                var exists = await conn.ExecuteScalarAsync<int>(
+                    new CommandDefinition(
+                        "SELECT 1 FROM FlexBackupEntry WHERE BackupEntryId=@BackupEntryId;",
+                        new { row.BackupEntryId },
+                        cancellationToken: ct));
 
-            if (exists == 1)
-                throw new InvalidOperationException($"BackupEntry {row.BackupEntryId} already exists.");
+                if (exists == 1)
+                    throw new InvalidOperationException($"BackupEntry {row.BackupEntryId} already exists.");
 
-            var sql = """
-                      INSERT INTO FlexBackupEntry
-                        (BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
-                         Status, StatusMessage,
-                         StartDateTimeUtc, EndDateTimeUtc,
-                         RunTimeMs,RunTimeCollectFilesMs,
-                         TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
-                         CompressionRatio)
-                      VALUES
-                        (@BackupEntryId, @JobName, @DestinationBackupFolder, @OperationMode, @CompressionMethod,
-                         @Status, @StatusMessage,
-                         @StartDateTimeUtc, @EndDateTimeUtc,
-                         @RunTimeMs,@RunTimeCollectFilesMs,
-                         @TotalFiles, @TotalChunks, @TotalBytes, @TotalBytesCompressed,
-                         @CompressionRatio);
-                      """;
+                var sql = """
+                          INSERT INTO FlexBackupEntry
+                            (BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
+                             Status, StatusMessage,
+                             StartDateTimeUtc, EndDateTimeUtc,
+                             RunTimeMs,RunTimeCollectFilesMs,
+                             TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
+                             CompressionRatio)
+                          VALUES
+                            (@BackupEntryId, @JobName, @DestinationBackupFolder, @OperationMode, @CompressionMethod,
+                             @Status, @StatusMessage,
+                             @StartDateTimeUtc, @EndDateTimeUtc,
+                             @RunTimeMs,@RunTimeCollectFilesMs,
+                             @TotalFiles, @TotalChunks, @TotalBytes, @TotalBytesCompressed,
+                             @CompressionRatio);
+                          """;
 
-            await conn.ExecuteAsync(new CommandDefinition(sql, row, cancellationToken: ct));
+                await conn.ExecuteAsync(new CommandDefinition(sql, row, cancellationToken: ct));
+            }
+            finally
+            {
+                _writeGate.Release();
+            }
         }
 
         public async Task UpdateAsync(FlexBackupEntry row, CancellationToken ct = default)
         {
-            Validate(row);
-            await EnsureSchemaAsync(ct);
-            using var conn = await OpenAsync(ct);
+            await _writeGate.WaitAsync(ct);
+            try
+            {
+                Validate(row);
+                await EnsureSchemaAsync(ct);
+                using var conn = await OpenAsync(ct);
 
-            var sql = """
-                      UPDATE FlexBackupEntry
-                      SET JobName=@JobName,
-                          DestinationBackupFolder=@DestinationBackupFolder,
-                          OperationMode=@OperationMode,
-                          CompressionMethod=@CompressionMethod,
-                          Status=@Status,
-                          StatusMessage=@StatusMessage,
-                          StartDateTimeUtc=@StartDateTimeUtc,
-                          EndDateTimeUtc=@EndDateTimeUtc,
-                          RunTimeMs=@RunTimeMs,
-                          RunTimeCollectFilesMs=@RunTimeCollectFilesMs,
-                          TotalFiles=@TotalFiles,
-                          TotalChunks=@TotalChunks,
-                          TotalBytes=@TotalBytes,
-                          TotalBytesCompressed=@TotalBytesCompressed,
-                          CompressionRatio=@CompressionRatio
-                      WHERE BackupEntryId=@BackupEntryId;
-                      """;
+                var sql = """
+                          UPDATE FlexBackupEntry
+                          SET JobName=@JobName,
+                              DestinationBackupFolder=@DestinationBackupFolder,
+                              OperationMode=@OperationMode,
+                              CompressionMethod=@CompressionMethod,
+                              Status=@Status,
+                              StatusMessage=@StatusMessage,
+                              StartDateTimeUtc=@StartDateTimeUtc,
+                              EndDateTimeUtc=@EndDateTimeUtc,
+                              RunTimeMs=@RunTimeMs,
+                              RunTimeCollectFilesMs=@RunTimeCollectFilesMs,
+                              TotalFiles=@TotalFiles,
+                              TotalChunks=@TotalChunks,
+                              TotalBytes=@TotalBytes,
+                              TotalBytesCompressed=@TotalBytesCompressed,
+                              CompressionRatio=@CompressionRatio
+                          WHERE BackupEntryId=@BackupEntryId;
+                          """;
 
-            var n = await conn.ExecuteAsync(new CommandDefinition(sql, row, cancellationToken: ct));
-            if (n == 0)
-                throw new InvalidOperationException($"BackupEntry {row.BackupEntryId} not found.");
+                var n = await conn.ExecuteAsync(new CommandDefinition(sql, row, cancellationToken: ct));
+                if (n == 0)
+                    throw new InvalidOperationException($"BackupEntry {row.BackupEntryId} not found.");
+            }
+            finally
+            {
+                _writeGate.Release();
+            }
         }
 
         public async Task DeleteAsync(string backupEntryId, CancellationToken ct = default)
         {
-            await EnsureSchemaAsync(ct);
-            using var conn = await OpenAsync(ct);
+            await _writeGate.WaitAsync(ct);
+            try
+            {
+                await EnsureSchemaAsync(ct);
+                using var conn = await OpenAsync(ct);
 
-            await conn.ExecuteAsync(new CommandDefinition(
-                "DELETE FROM FlexBackupEntry WHERE BackupEntryId=@BackupEntryId;",
-                new { BackupEntryId = backupEntryId },
-                cancellationToken: ct));
+                await conn.ExecuteAsync(new CommandDefinition(
+                    "DELETE FROM FlexBackupEntry WHERE BackupEntryId=@BackupEntryId;",
+                    new { BackupEntryId = backupEntryId },
+                    cancellationToken: ct));
+            }
+            finally
+            {
+                _writeGate.Release();
+            }
         }
+
         private static void Validate(FlexBackupEntry e)
         {
             EnsureMax(e.JobName, FlexBackupLimits.JobNameMax, nameof(e.JobName));
             EnsureMax(e.DestinationBackupFolder, FlexBackupLimits.DestinationBackupFolderMax, nameof(e.DestinationBackupFolder));
             EnsureMax(e.StatusMessage, FlexBackupLimits.StatusMessageMax, nameof(e.StatusMessage));
         }
+
         private static void EnsureMax(string? value, int max, string fieldName)
         {
-            if (value is null) return;            // null er ok
+            if (value is null) return;
             if (value.Length > max)
                 throw new ArgumentException($"{fieldName} length must be ≤ {max} characters.", fieldName);
         }
+
         private async Task EnsureSchemaAsync(CancellationToken ct)
         {
             await SqliteFlexBackupSchemaHelper.EnsureSchemaAsync(_cs, ct);
