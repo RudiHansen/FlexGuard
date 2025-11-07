@@ -40,7 +40,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
                       SELECT BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
                              Status, StatusMessage,
                              StartDateTimeUtc, EndDateTimeUtc,
-                             RunTimeMs,
+                             RunTimeMs,RunTimeCollectFilesMs,
                              TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
                              CompressionRatio
                       FROM FlexBackupEntry
@@ -61,7 +61,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
                       SELECT BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
                              Status, StatusMessage,
                              StartDateTimeUtc, EndDateTimeUtc,
-                             RunTimeMs,
+                             RunTimeMs,RunTimeCollectFilesMs,
                              TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
                              CompressionRatio
                       FROM FlexBackupEntry
@@ -80,7 +80,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
                       SELECT BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
                              Status, StatusMessage,
                              StartDateTimeUtc, EndDateTimeUtc,
-                             RunTimeMs,
+                             RunTimeMs,RunTimeCollectFilesMs,
                              TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
                              CompressionRatio
                       FROM FlexBackupEntry
@@ -131,14 +131,14 @@ namespace FlexGuard.Data.Repositories.Sqlite
                         (BackupEntryId, JobName, DestinationBackupFolder, OperationMode, CompressionMethod,
                          Status, StatusMessage,
                          StartDateTimeUtc, EndDateTimeUtc,
-                         RunTimeMs,
+                         RunTimeMs,RunTimeCollectFilesMs,
                          TotalFiles, TotalChunks, TotalBytes, TotalBytesCompressed,
                          CompressionRatio)
                       VALUES
                         (@BackupEntryId, @JobName, @DestinationBackupFolder, @OperationMode, @CompressionMethod,
                          @Status, @StatusMessage,
                          @StartDateTimeUtc, @EndDateTimeUtc,
-                         @RunTimeMs,
+                         @RunTimeMs,@RunTimeCollectFilesMs,
                          @TotalFiles, @TotalChunks, @TotalBytes, @TotalBytesCompressed,
                          @CompressionRatio);
                       """;
@@ -163,6 +163,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
                           StartDateTimeUtc=@StartDateTimeUtc,
                           EndDateTimeUtc=@EndDateTimeUtc,
                           RunTimeMs=@RunTimeMs,
+                          RunTimeCollectFilesMs=@RunTimeCollectFilesMs,
                           TotalFiles=@TotalFiles,
                           TotalChunks=@TotalChunks,
                           TotalBytes=@TotalBytes,
@@ -216,6 +217,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               StartDateTimeUtc          TEXT    NOT NULL,
               EndDateTimeUtc            TEXT    NULL,
               RunTimeMs                 INTEGER NOT NULL CHECK(RunTimeMs >= 0),
+              RunTimeCollectFilesMs     INTEGER NOT NULL CHECK(RunTimeCollectFilesMs >= 0),
               TotalFiles                INTEGER NOT NULL CHECK(TotalFiles >= 0),
               TotalChunks               INTEGER NOT NULL CHECK(TotalChunks >= 0),
               TotalBytes                INTEGER NOT NULL CHECK(TotalBytes >= 0),

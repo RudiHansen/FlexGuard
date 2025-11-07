@@ -70,7 +70,7 @@ namespace FlexGuard.Core.Recording
         /// Creates a FlexBackupEntry row and initializes in-memory totals.
         /// Assumes there is no active run.
         /// </summary>
-        public async Task<string> StartRunAsync(string jobName,string destinationBackupFolder,OperationMode mode,CompressionMethod compressionMethod,CancellationToken cancellationToken = default)
+        public async Task<string> StartRunAsync(string jobName,string destinationBackupFolder,OperationMode mode,CompressionMethod compressionMethod,long RunTimeCollectFilesMs, CancellationToken cancellationToken = default)
         {
             if (Interlocked.Exchange(ref _runActiveFlag, 1) == 1)
                 throw new InvalidOperationException("A backup run is already active in this process.");
@@ -93,12 +93,13 @@ namespace FlexGuard.Core.Recording
                 OperationMode = mode,
                 CompressionMethod = compressionMethod,
                 StartDateTimeUtc = _runStartUtc,
+                RunTimeCollectFilesMs = RunTimeCollectFilesMs,
                 Status = RunStatus.Running,
                 StatusMessage = "Running"
             };
             _currentBackupEntryId = entry.BackupEntryId;
 
-            await _backupEntryStore.InsertAsync(entry, cancellationToken).ConfigureAwait(false);
+            await _backupEntryStore.InsertAsync(entry, cancellationToken);
             _currentBackupEntry = entry;
 
             return _currentBackupEntryId;
@@ -147,7 +148,7 @@ namespace FlexGuard.Core.Recording
             _currentBackupEntry.TotalBytesCompressed = totalCompressed;
             _currentBackupEntry.CompressionRatio = ratio;
 
-            await _backupEntryStore.UpdateAsync(_currentBackupEntry, cancellationToken).ConfigureAwait(false);
+            await _backupEntryStore.UpdateAsync(_currentBackupEntry, cancellationToken);
 
             // Mark run inactive
             _currentBackupEntryId = null;
@@ -181,7 +182,7 @@ namespace FlexGuard.Core.Recording
                 StatusMessage = "Running"
             };
 
-            await _chunkEntryStore.InsertAsync(chunkRow, cancellationToken).ConfigureAwait(false);
+            await _chunkEntryStore.InsertAsync(chunkRow, cancellationToken);
 
             // Track scratch info for accumulation and later completion.
             // TODO: I am still not sure that I need _chunkScratch, but will deside later. (Remember to clean it up on CompleteChunkAsync)
@@ -217,7 +218,7 @@ namespace FlexGuard.Core.Recording
             if (runTime < TimeSpan.Zero) runTime = TimeSpan.Zero;
 
             // Get existing chunk row (we need to update it)
-            FlexBackupChunkEntry currentChunk = await _chunkEntryStore.GetByIdAsync(chunkEntryId, cancellationToken).ConfigureAwait(false) 
+            FlexBackupChunkEntry currentChunk = await _chunkEntryStore.GetByIdAsync(chunkEntryId, cancellationToken) 
                 ?? throw new InvalidOperationException($"No chunk entry found with ChunkEntryId '{chunkEntryId}'.");
 
             currentChunk.CompressionMethod = compressionMethod;
@@ -241,7 +242,7 @@ namespace FlexGuard.Core.Recording
             currentChunk.MemoryEnd = PeakManagedBytes ?? 0;
 
             // Persist the final state. Your store should support Update.
-            await _chunkEntryStore.UpdateAsync(currentChunk, cancellationToken).ConfigureAwait(false);
+            await _chunkEntryStore.UpdateAsync(currentChunk, cancellationToken);
 
             // Clean up scratch for this chunk
             _chunkScratch.TryRemove(chunkEntryId, out _);
@@ -311,34 +312,34 @@ namespace FlexGuard.Core.Recording
                 MemoryEnd = PeakManagedBytes ?? 0,
             };
 
-            await _fileEntryStore.InsertAsync(fileRow, cancellationToken).ConfigureAwait(false);
+            await _fileEntryStore.InsertAsync(fileRow, cancellationToken);
         }
-        public async Task<FlexBackupChunkEntry?> RestoreGetFlexBackupChunkEntryById(string chunkEntryId)
+        public async Task<FlexBackupChunkEntry?> GetFlexBackupChunkEntryByIdAsync(string chunkEntryId)
         {
-            FlexBackupChunkEntry? entry = await _chunkEntryStore.GetByIdAsync(chunkEntryId).ConfigureAwait(false);
+            FlexBackupChunkEntry? entry = await _chunkEntryStore.GetByIdAsync(chunkEntryId);
             return entry;
         }
-        public async Task<FlexBackupEntry?> RestoreGetFlexBackupEntryForBackupEntryId(string backupEntryId)
+        public async Task<FlexBackupEntry?> GetFlexBackupEntryForBackupEntryIdAsync(string backupEntryId)
         {
-            FlexBackupEntry? entry = await _backupEntryStore.GetByIdAsync(backupEntryId).ConfigureAwait(false);
+            FlexBackupEntry? entry = await _backupEntryStore.GetByIdAsync(backupEntryId);
 
             return entry;
         }
 
-        public async Task<List<FlexBackupEntry>?> RestoreGetFlexBackupEntryForJobName(string jobName)
+        public async Task<List<FlexBackupEntry>?> GetFlexBackupEntryForJobNameAsync(string jobName)
         {
-            List<FlexBackupEntry>? entries = await _backupEntryStore.GetByJobNameAsync(jobName).ConfigureAwait(false);
+            List<FlexBackupEntry>? entries = await _backupEntryStore.GetByJobNameAsync(jobName);
 
             return entries;
         }
-        public async Task<List<FlexBackupFileEntry>?> RestoreGetFlexBackupFileEntryForBackupEntryId(string backupEntryId)
+        public async Task<List<FlexBackupFileEntry>?> GetFlexBackupFileEntryForBackupEntryIdAsync(string backupEntryId)
         {
-            List<FlexBackupFileEntry>? entries = await _fileEntryStore.GetBybackupEntryIdAsync(backupEntryId).ConfigureAwait(false);
+            List<FlexBackupFileEntry>? entries = await _fileEntryStore.GetBybackupEntryIdAsync(backupEntryId);
             return entries;
         }
-        public async Task<DateTimeOffset?> GetLastJobRunTime(string jobName)
+        public async Task<DateTimeOffset?> GetLastJobRunTimeAsync(string jobName)
         {
-            return await _backupEntryStore.GetLastJobRunTime(jobName).ConfigureAwait(false);
+            return await _backupEntryStore.GetLastJobRunTime(jobName);
         }
 
         /// <summary>

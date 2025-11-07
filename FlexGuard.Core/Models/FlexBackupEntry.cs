@@ -22,6 +22,7 @@ namespace FlexGuard.Core.Models
         public DateTimeOffset? EndDateTimeUtc { get; set; }
         /// <summary>Total runtime in milliseconds for the job.</summary>
         public long RunTimeMs { get; set; }
+        public long RunTimeCollectFilesMs { get; set; }
         // Aggregates
         public long TotalFiles { get; set; }
         public long TotalChunks { get; set; }

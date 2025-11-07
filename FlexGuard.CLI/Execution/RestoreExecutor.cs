@@ -1,6 +1,5 @@
 ﻿using FlexGuard.CLI.Infrastructure;
 using FlexGuard.CLI.Restore;
-using FlexGuard.Core.Compression;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Models;
 using FlexGuard.Core.Options;
@@ -39,7 +38,7 @@ public static class RestoreExecutor
                 new TaskDescriptionColumn(),
                 new ProgressBarColumn(),
                 new PercentageColumn())
-                .Start(ctx =>
+                .Start(async ctx =>
                 {
                     var task = ctx.AddTask("Restoring files...", maxValue: totalSize);
 
@@ -50,7 +49,7 @@ public static class RestoreExecutor
                         });
 
                     var recorder = Services.Get<BackupRunRecorder>();
-                    FlexBackupEntry? backupEntry = recorder.RestoreGetFlexBackupEntryForBackupEntryId(selectedFiles.First().BackupEntryId).GetAwaiter().GetResult();
+                    FlexBackupEntry? backupEntry = await recorder.GetFlexBackupEntryForBackupEntryIdAsync(selectedFiles.First().BackupEntryId);
                     if (backupEntry == null)
                     {
                         reporter.Error($"Backup entry not found for BackupEntryId: {selectedFiles.First().BackupEntryId}");
@@ -65,7 +64,7 @@ public static class RestoreExecutor
                         if (!chunkCache.TryGetValue(file.ChunkEntryId, out var chunkEntry))
                         {
                             // ikke i cache, hent fra recorder
-                            chunkEntry = recorder.RestoreGetFlexBackupChunkEntryById(file.ChunkEntryId).GetAwaiter().GetResult();
+                            chunkEntry = await recorder.GetFlexBackupChunkEntryByIdAsync(file.ChunkEntryId);
 
                             // læg i cache (også selv om den er null, så vi ikke henter igen)
                             chunkCache[file.ChunkEntryId] = chunkEntry;
@@ -90,25 +89,6 @@ public static class RestoreExecutor
                                 chunkEntry.CompressionMethod,
                                 true,
                                 reporterWithProgress);
-
-                            // Og Her er den gamle kode, så jeg lige kan se hvor mine værdier kommer fra.
-                            /*
-                            var chunkPath = Path.Combine(
-                                jobConfig.DestinationPath,
-                                file.BackupEntry.DestinationFolderName,
-                                file.ChunkFile);
-
-                            RestoreHelper.RestoreFile(
-                                jobConfig.RestoreTargetFolder,
-                                chunkPath,
-                                file.ChunkHash,
-                                file.RelativePath,
-                                file.FileSize,
-                                file.FileHash,
-                                file.Compression,
-                                file.CompressionSkipped,
-                                reporterWithProgress);
-                            */
                         }
                     }
                 });

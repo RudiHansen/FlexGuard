@@ -193,6 +193,7 @@ namespace FlexGuard.Data.Repositories.Sqlite
               StartDateTimeUtc          TEXT    NOT NULL,
               EndDateTimeUtc            TEXT    NULL,
               RunTimeMs                 INTEGER NOT NULL CHECK(RunTimeMs >= 0),
+              RunTimeCollectFilesMs     INTEGER NOT NULL CHECK(RunTimeCollectFilesMs >= 0),
               TotalFiles                INTEGER NOT NULL CHECK(TotalFiles >= 0),
               TotalChunks               INTEGER NOT NULL CHECK(TotalChunks >= 0),
               TotalBytes                INTEGER NOT NULL CHECK(TotalBytes >= 0),

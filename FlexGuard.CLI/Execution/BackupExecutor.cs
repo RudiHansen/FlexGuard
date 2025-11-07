@@ -25,7 +25,7 @@ public static class BackupExecutor
 
         if (options.Mode == Core.Options.OperationMode.DifferentialBackup)
         {
-            DateTimeOffset? lastDateTimeOffset = await recorder.GetLastJobRunTime(options.JobName);
+            DateTimeOffset? lastDateTimeOffset = await recorder.GetLastJobRunTimeAsync(options.JobName);
             if(lastDateTimeOffset is not null)
             {
                 lastBackupTime = lastDateTimeOffset.Value.UtcDateTime;
@@ -40,15 +40,19 @@ public static class BackupExecutor
         // We need DesitnationFolderName
         string DestinationFolderName = $"{DateTime.UtcNow:yyyy-MM-ddTHHmm}_{GetShortType(options.Mode)}";
 
+        long timerCollectFilesElapsed;
+        using var timerCollectFiles = TimingScope.Start();
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
         if(allFiles.Count <= 0)
         {
             reporter.Info("There are no files to backup!");
             return;
         }
+        timerCollectFiles.Stop();
+        timerCollectFilesElapsed = (long)timerCollectFiles.Elapsed.TotalMilliseconds;
 
         // Create the start record for the BackupJob in FlexBackupEntry
-        await recorder.StartRunAsync(options.JobName, DestinationFolderName, options.Mode, options.Compression);
+        await recorder.StartRunAsync(options.JobName, DestinationFolderName, options.Mode, options.Compression, timerCollectFilesElapsed);
 
         var totalSize = allFiles.Sum(f => f.FileSize);
 

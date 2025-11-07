@@ -1,11 +1,8 @@
 ﻿using FlexGuard.CLI.Infrastructure;
-using FlexGuard.Core.Compression;
 using FlexGuard.Core.Config;
-using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Models;
 using FlexGuard.Core.Recording;
 using Spectre.Console;
-using System.Text.Json;
 
 namespace FlexGuard.CLI.Restore;
 
@@ -21,7 +18,7 @@ public class RestoreFileSelector
     public List<FlexBackupFileEntry>? SelectFiles()
     {
         var recorder = Services.Get<BackupRunRecorder>();
-        var jobs = recorder.RestoreGetFlexBackupEntryForJobName(_jobConfig.JobName).GetAwaiter().GetResult();   // Get list of jobs for the given job name
+        var jobs = recorder.GetFlexBackupEntryForJobNameAsync(_jobConfig.JobName).GetAwaiter().GetResult();   // Get list of jobs for the given job name
 
 
         AnsiConsole.Clear();
@@ -42,7 +39,7 @@ public class RestoreFileSelector
         );
 
         // TODO: Validate selected job status, and perhaps also find som way to ckeck if the backup files are accessible
-        var allFiles = recorder.RestoreGetFlexBackupFileEntryForBackupEntryId(selected.BackupEntryId).GetAwaiter().GetResult(); // Get all files for the selected backup run
+        var allFiles = recorder.GetFlexBackupFileEntryForBackupEntryIdAsync(selected.BackupEntryId).GetAwaiter().GetResult(); // Get all files for the selected backup run
         if(allFiles == null)
         {
             AnsiConsole.MarkupLine("[red]No files found for the selected backup run.[/]");
