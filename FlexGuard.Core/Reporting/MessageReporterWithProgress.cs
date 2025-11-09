@@ -7,6 +7,9 @@ public class MessageReporterWithProgress : IMessageReporter
     private long _currentBytes = 0;
     private readonly long _totalBytes;
 
+    // beskytter selve callback'et, så flere tråde ikke skriver til progress samtidig
+    private static readonly object _progressLock = new();
+
     public MessageReporterWithProgress(IMessageReporter baseReporter, long totalBytes, Action<long, long, string> progressCallback)
     {
         _base = baseReporter;
@@ -14,17 +17,37 @@ public class MessageReporterWithProgress : IMessageReporter
         _totalBytes = totalBytes;
     }
 
+    // kald fra fx "vi skifter bare filnavn"
     public void ReportProgress(string filename)
     {
-        _progressCallback(_currentBytes, _totalBytes, filename);
-    }
-    public void ReportProgress(long fileSize, string filename)
-    {
-        _currentBytes += fileSize;
-        _progressCallback(_currentBytes, _totalBytes, filename);
+        lock (_progressLock)
+        {
+            _progressCallback(_currentBytes, _totalBytes, filename);
+        }
     }
 
-    // Delegér alle andre kald
+    // kald fra "vi har lige skrevet X bytes af en fil"
+    public void ReportProgress(long fileSize, string filename)
+    {
+        // trådsikker increment
+        long current = Interlocked.Add(ref _currentBytes, fileSize);
+
+        lock (_progressLock)
+        {
+            _progressCallback(current, _totalBytes, filename);
+        }
+    }
+
+    // passthrough-varianten bruger vi også med lås
+    public void ReportProgress(long currentBytes, long totalBytes, string file)
+    {
+        lock (_progressLock)
+        {
+            _progressCallback(currentBytes, totalBytes, file);
+        }
+    }
+
+    // Delegér alle andre kald uændret
     public void Info(string message) => _base.Info(message);
     public void Verbose(string message) => _base.Verbose(message);
     public void Success(string message) => _base.Success(message);
@@ -33,6 +56,4 @@ public class MessageReporterWithProgress : IMessageReporter
     public void Error(Exception ex) => _base.Error(ex);
     public void Debug(string message) => _base.Debug(message);
     public void WriteRaw(string message) => _base.WriteRaw(message);
-    public void ReportProgress(long currentBytes, long totalBytes, string file) =>
-        _progressCallback(currentBytes, totalBytes, file); // optional passthrough
 }
