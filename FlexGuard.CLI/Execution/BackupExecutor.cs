@@ -1,7 +1,6 @@
 ﻿using FlexGuard.CLI.Infrastructure;
 using FlexGuard.Core.Backup;
 using FlexGuard.Core.Config;
-using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Models;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Recording;
@@ -23,7 +22,7 @@ public static class BackupExecutor
 
         DateTime? lastBackupTime = null;
 
-        if (options.Mode == Core.Options.OperationMode.DifferentialBackup)
+        if (options.Mode == OperationMode.DifferentialBackup)
         {
             DateTimeOffset? lastDateTimeOffset = await recorder.GetLastJobRunTimeAsync(options.JobName);
             if(lastDateTimeOffset is not null)
@@ -99,5 +98,4 @@ public static class BackupExecutor
             _ => "ERROR",// If this used we have a problem
         };
     }
-
 }
