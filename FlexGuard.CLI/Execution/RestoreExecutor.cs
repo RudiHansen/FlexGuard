@@ -87,7 +87,6 @@ public static class RestoreExecutor
                                 file.FileSize,
                                 file.FileHash,
                                 chunkEntry.CompressionMethod,
-                                true,
                                 reporterWithProgress);
                         }
                     }

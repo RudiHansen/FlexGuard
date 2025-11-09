@@ -15,7 +15,6 @@ public static class RestoreHelper
         long fileSize,
         string expectedHash,
         CompressionMethod compressionMethod,
-        bool compressionSkipped,
         IMessageReporter reporter)
     {
         if (string.IsNullOrWhiteSpace(restoreTargetFolder))
