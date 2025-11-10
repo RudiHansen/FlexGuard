@@ -1,4 +1,5 @@
 ﻿using FlexGuard.CLI.Infrastructure;
+using FlexGuard.CLI.Reporting;
 using FlexGuard.Core.Backup;
 using FlexGuard.Core.Config;
 using FlexGuard.Core.Models;
@@ -7,6 +8,7 @@ using FlexGuard.Core.Recording;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 using Spectre.Console;
+using System.Threading.Tasks;
 
 namespace FlexGuard.CLI.Execution;
 
@@ -58,45 +60,39 @@ public static class BackupExecutor
 
         string backupFolderPath = Path.Combine(jobConfig.DestinationPath, DestinationFolderName);
 
+        // Setup BackupProgressState to use for showing job progress.
+        var progress = new BackupProgressState
+        {
+            TotalFiles = allFiles.Count,
+            TotalBytes = totalSize,
+            TotalChunks = fileGroups.Count
+        };
+
         reporter.Info($"Total: {allFiles.Count} files, {FormatHelper.FormatBytes(totalSize)}, {fileGroups.Count} group(s)");
+        // Start progress renderer (live console progress)
+        using var renderer = new ProgressRenderer(progress);
+        renderer.Start();
 
         // Control maximum parallel chunk jobs
         int maxParallelTasks = options.MaxParallelTasks;
 
-        await AnsiConsole.Progress()
-            .AutoClear(false)
-            .HideCompleted(false)
-            .Columns(
-                new TaskDescriptionColumn(),
-                new ProgressBarColumn(),
-                new PercentageColumn())
-            .Start(async ctx =>
+        using var sem = new SemaphoreSlim(maxParallelTasks);
+
+        var tasks = fileGroups.Select(async group =>
+        {
+            await sem.WaitAsync();
+            try
             {
-                var task = ctx.AddTask("Backing up files...", maxValue: totalSize);
+                await ChunkProcessor.ProcessAsync(group, backupFolderPath, reporter, progress, options, recorder);
+            }
+            finally
+            {
+                sem.Release();
+            }
+        });
 
-                var reporterWithProgress = new MessageReporterWithProgress(reporter, totalSize,
-                    (currentBytes, totalBytes, _) =>
-                    {
-                        task.Value = currentBytes;
-                    });
-
-                using var sem = new SemaphoreSlim(maxParallelTasks);
-
-                var tasks = fileGroups.Select(async group =>
-                {
-                    await sem.WaitAsync();
-                    try
-                    {
-                        await ChunkProcessor.ProcessAsync(group, backupFolderPath, reporterWithProgress, options, recorder);
-                    }
-                    finally
-                    {
-                        sem.Release();
-                    }
-                });
-
-                await Task.WhenAll(tasks);
-            });
+        await Task.WhenAll(tasks);
+        renderer.Stop();
 
         await recorder.CompleteRunAsync(RunStatus.Completed);
 

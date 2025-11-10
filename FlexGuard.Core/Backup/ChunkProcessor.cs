@@ -15,6 +15,7 @@ public static class ChunkProcessor
         FileGroup group,
         string backupFolderPath,
         IMessageReporter reporter,
+        BackupProgressState progress,
         ProgramOptions options,
         BackupRunRecorder recorder)
     {
@@ -124,6 +125,8 @@ public static class ChunkProcessor
                             meterFileResult.PeakCpuPercent,
                             meterFileResult.PeakWorkingSetBytes,
                             meterFileResult.PeakManagedBytes);
+                        // Add the processed files size to progress.
+                        progress.AddFile(file.FileSize);
                     }
                     catch (FileNotFoundException)
                     {
@@ -213,6 +216,7 @@ public static class ChunkProcessor
                 result.PeakCpuPercent,
                 result.PeakWorkingSetBytes,
                 result.PeakManagedBytes);
+            progress.CompleteChunk();
         }
         catch (Exception ex)
         {
