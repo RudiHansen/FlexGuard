@@ -25,7 +25,7 @@ public static class BackupExecutor
         if (options.Mode == OperationMode.DifferentialBackup)
         {
             DateTimeOffset? lastDateTimeOffset = await recorder.GetLastJobRunTimeAsync(options.JobName);
-            if(lastDateTimeOffset is not null)
+            if (lastDateTimeOffset is not null)
             {
                 lastBackupTime = lastDateTimeOffset.Value.UtcDateTime;
             }
@@ -36,13 +36,13 @@ public static class BackupExecutor
             }
         }
 
-        // We need DesitnationFolderName
+        // We need DestinationFolderName
         string DestinationFolderName = $"{DateTime.UtcNow:yyyy-MM-ddTHHmm}_{GetShortType(options.Mode)}";
 
         long timerCollectFilesElapsed;
         using var timerCollectFiles = TimingScope.Start();
         var allFiles = FileCollector.CollectFiles(jobConfig, reporter, lastBackupTime);
-        if(allFiles.Count <= 0)
+        if (allFiles.Count <= 0)
         {
             reporter.Info("There are no files to backup!");
             return;
@@ -54,12 +54,14 @@ public static class BackupExecutor
         await recorder.StartRunAsync(options.JobName, DestinationFolderName, options.Mode, options.Compression, timerCollectFilesElapsed);
 
         var totalSize = allFiles.Sum(f => f.FileSize);
-
         var fileGroups = FileGrouper.GroupFiles(allFiles, options.MaxFilesPerGroup, options.MaxBytesPerGroup);
 
         string backupFolderPath = Path.Combine(jobConfig.DestinationPath, DestinationFolderName);
 
         reporter.Info($"Total: {allFiles.Count} files, {FormatHelper.FormatBytes(totalSize)}, {fileGroups.Count} group(s)");
+
+        // Control maximum parallel chunk jobs
+        int maxParallelTasks = options.MaxParallelTasks;
 
         await AnsiConsole.Progress()
             .AutoClear(false)
@@ -78,24 +80,37 @@ public static class BackupExecutor
                         task.Value = currentBytes;
                     });
 
-                foreach (var group in fileGroups)
+                using var sem = new SemaphoreSlim(maxParallelTasks);
+
+                var tasks = fileGroups.Select(async group =>
                 {
-                    await ChunkProcessor.ProcessAsync(group, backupFolderPath, reporterWithProgress ,options, recorder);
-                }
+                    await sem.WaitAsync();
+                    try
+                    {
+                        await ChunkProcessor.ProcessAsync(group, backupFolderPath, reporterWithProgress, options, recorder);
+                    }
+                    finally
+                    {
+                        sem.Release();
+                    }
+                });
+
+                await Task.WhenAll(tasks);
             });
 
         await recorder.CompleteRunAsync(RunStatus.Completed);
 
         reporter.Success("Backup process completed successfully.");
     }
+
     private static string GetShortType(OperationMode operationMode)
     {
         return operationMode switch
         {
             OperationMode.FullBackup => "FULL",
             OperationMode.DifferentialBackup => "DIFF",
-            OperationMode.Restore => "RESTORE",// Will proberly not be used, but added for completeness
-            _ => "ERROR",// If this used we have a problem
+            OperationMode.Restore => "RESTORE", // Will probably not be used, but added for completeness
+            _ => "ERROR", // If this used we have a problem
         };
     }
 }

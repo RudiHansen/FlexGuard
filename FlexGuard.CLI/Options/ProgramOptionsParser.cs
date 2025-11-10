@@ -69,6 +69,10 @@ public static class ProgramOptionsParser
                         options.MaxBytesPerGroup = ParseLong(value, "--maxbytes");
                         break;
 
+                    case "max-parallel-tasks":
+                        options.MaxParallelTasks = ParseInt(value, "--max-parallel-tasks");
+                        break;
+
                     case "compression":
                         if (Enum.TryParse<CompressionMethod>(value, true, out var comp))
                             options.Compression = comp;
@@ -113,6 +117,7 @@ public static class ProgramOptionsParser
         reporter.WriteRaw("  --jobname <name>                  Name of the backup job.");
         reporter.WriteRaw("  --mode <full|diff|restore>        Operation mode (Full, Differential, or Restore).");
         reporter.WriteRaw("  --maxfiles <int>                  Max files per group (default: 1000).");
+        reporter.WriteRaw("  --max-parallel-tasks <int>        Max parallel tasks to run (default: 8).");
         reporter.WriteRaw("  --maxbytes <long>                 Max bytes per group (default: 1GB).");
         reporter.WriteRaw("  --compression <gzip|brotli|zstd>  Compression method (default: zstd).");
         reporter.WriteRaw("  --measure-compression             Enable compression ratio measurement.");

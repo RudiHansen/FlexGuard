@@ -9,6 +9,7 @@ public class ProgramOptions
 
     public int MaxFilesPerGroup { get; init; } = 1000;
     public long MaxBytesPerGroup { get; init; } = 1024 * 1024 * 1024; // 1 Gb
+    public int MaxParallelTasks { get; init; } = 8;
     public bool EnableCompressionRatioMeasurement { get; init; } = false;
     public CompressionMethod Compression { get; set; } = CompressionMethod.Zstd;
 
@@ -17,12 +18,14 @@ public class ProgramOptions
         JobName = jobName;
         Mode = mode;
     }
-    public ProgramOptions(string jobName,OperationMode mode,int maxFilesPerGroup,long maxBytesPerGroup,bool enableCompressionRatioMeasurement,CompressionMethod compression)
+    public ProgramOptions(string jobName,OperationMode mode,int maxFilesPerGroup,long maxBytesPerGroup, int maxParallelTasks, bool enableCompressionRatioMeasurement,CompressionMethod compression)
     {
         JobName = jobName ?? throw new ArgumentNullException(nameof(jobName));
         Mode = mode;
         MaxFilesPerGroup = maxFilesPerGroup;
         MaxBytesPerGroup = maxBytesPerGroup;
+        MaxParallelTasks = maxParallelTasks;
+        MaxParallelTasks = maxParallelTasks;
         EnableCompressionRatioMeasurement = enableCompressionRatioMeasurement;
         Compression = compression;
     }
