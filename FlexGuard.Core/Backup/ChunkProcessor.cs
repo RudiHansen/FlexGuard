@@ -19,6 +19,7 @@ public static class ChunkProcessor
     {
         var chunkFileName = $"{group.Index:D4}.fgchunk";
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
+        reporter.Debug($"Starting chunk {chunkFileName}");
 
         Directory.CreateDirectory(backupFolderPath);
 
@@ -171,6 +172,7 @@ public static class ChunkProcessor
         {
             // Step 3: Clean up temp file
             try { if (File.Exists(tempZipPath)) File.Delete(tempZipPath); } catch { }
+            reporter.Debug($"Completed chunk {chunkFileName}");
         }
     }
 }
