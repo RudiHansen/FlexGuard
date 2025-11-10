@@ -15,22 +15,19 @@ namespace FlexGuard.CLI.Reporting
         private readonly object _lock = new();
 
         // --- Smoothing ---
-        private readonly Queue<double> _speedSamples = new();
-        private const int MaxSamples = 5;
+        private double _smoothedSpeed;
+        private bool _initialized;
+        private TimeSpan? _lastEta;
+        private static readonly TimeSpan EtaClamp = TimeSpan.FromMinutes(1);
+        private const double Alpha = 0.2; // weight for EMA
 
         public ProgressRenderer(BackupProgressState progress)
         {
             _progress = progress ?? throw new ArgumentNullException(nameof(progress));
         }
 
-        /// <summary>
-        /// Starts the renderer in a background task.
-        /// </summary>
         public void Start() => _renderTask = Task.Run(RenderLoopAsync);
 
-        /// <summary>
-        /// Stops the renderer and waits for it to complete.
-        /// </summary>
         public void Stop()
         {
             _cts.Cancel();
@@ -45,7 +42,6 @@ namespace FlexGuard.CLI.Reporting
             {
                 var snapshot = _progress.Snapshot();
 
-                // Throttle to max 1 update per second
                 if ((DateTimeOffset.UtcNow - _lastRender).TotalMilliseconds < 1000)
                 {
                     await Task.Delay(200);
@@ -56,21 +52,14 @@ namespace FlexGuard.CLI.Reporting
 
                 lock (_lock)
                 {
-                    // Move cursor up to overwrite previous progress
                     if (lastLines > 0)
                         AnsiConsole.Cursor.MoveUp(lastLines);
 
-                    // Smooth ETA using averaged speed
-                    double smoothedSpeed = AddAndAverageSpeed(snapshot.SpeedMBs);
+                    // --- Smooth speed + ETA ---
+                    (double smoothedSpeed, TimeSpan eta) = SmoothSpeedAndEta(
+                        snapshot.SpeedMBs, snapshot.TotalMB, snapshot.ProcessedMB);
 
-                    var eta = TimeSpan.Zero;
-                    if (smoothedSpeed > 0 && snapshot.ProcessedMB < snapshot.TotalMB)
-                    {
-                        double remainingMB = snapshot.TotalMB - snapshot.ProcessedMB;
-                        eta = TimeSpan.FromSeconds(remainingMB / smoothedSpeed);
-                    }
-
-                    // Build formatted output
+                    // --- Build output ---
                     int consoleWidth = Math.Max(40, Console.WindowWidth - 25);
                     var bar = BuildProgressBar(snapshot.ProgressPercent, consoleWidth);
 
@@ -94,7 +83,6 @@ namespace FlexGuard.CLI.Reporting
                 await Task.Delay(1000, _cts.Token);
             }
 
-            // Final snapshot when done
             var final = _progress.Snapshot();
             AnsiConsole.MarkupLine(
                 $"[green]Backup complete:[/] {final.ProgressPercent:F1}%  " +
@@ -103,22 +91,37 @@ namespace FlexGuard.CLI.Reporting
 
         // --- Helpers ---
 
-        private double AddAndAverageSpeed(double currentSpeed)
+        private (double speed, TimeSpan eta) SmoothSpeedAndEta(double newSpeed, double totalMB, double processedMB)
         {
-            if (currentSpeed > 0)
+            if (!_initialized)
             {
-                _speedSamples.Enqueue(currentSpeed);
-                if (_speedSamples.Count > MaxSamples)
-                    _speedSamples.Dequeue();
+                _smoothedSpeed = newSpeed;
+                _initialized = true;
+            }
+            else
+            {
+                _smoothedSpeed = (Alpha * newSpeed) + ((1 - Alpha) * _smoothedSpeed);
             }
 
-            if (_speedSamples.Count == 0)
-                return currentSpeed;
+            var eta = TimeSpan.Zero;
+            if (_smoothedSpeed > 0 && processedMB < totalMB)
+            {
+                double remainingMB = totalMB - processedMB;
+                eta = TimeSpan.FromSeconds(remainingMB / _smoothedSpeed);
+            }
 
-            double sum = 0;
-            foreach (var s in _speedSamples)
-                sum += s;
-            return sum / _speedSamples.Count;
+            // Clamp ETA change
+            if (_lastEta != null)
+            {
+                var diff = eta - _lastEta.Value;
+                if (diff > EtaClamp)
+                    eta = _lastEta.Value + EtaClamp;
+                else if (diff < -EtaClamp)
+                    eta = _lastEta.Value - EtaClamp;
+            }
+
+            _lastEta = eta;
+            return (_smoothedSpeed, eta);
         }
 
         private static string BuildProgressBar(double percent, int width)
