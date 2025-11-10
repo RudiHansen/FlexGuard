@@ -1,10 +1,11 @@
-﻿using FlexGuard.Core.Compression;
+﻿using System.Security.Cryptography;
+using System.IO.Compression;
+using FlexGuard.Core.Compression;
 using FlexGuard.Core.Manifest;
 using FlexGuard.Core.Options;
 using FlexGuard.Core.Recording;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
-using System.IO.Compression;
 
 namespace FlexGuard.Core.Backup;
 
@@ -19,17 +20,12 @@ public static class ChunkProcessor
     {
         var chunkFileName = $"{group.Index:D4}.fgchunk";
         var outputPath = Path.Combine(backupFolderPath, chunkFileName);
-        reporter.Debug($"Starting chunk {chunkFileName}");
 
         Directory.CreateDirectory(backupFolderPath);
 
-        // Determine ZIP compression level for the inner archive (no compression inside zip)
         var zipCompressionLevel = CompressionLevel.NoCompression;
-
-        // Select outer compressor based on the manifest (GZip, Brotli, Zstd)
         var compressor = CompressorFactory.Create(options.Compression);
 
-        // Step 1: Create temporary zip file path
         var tempZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
         string chunkHash;
@@ -40,18 +36,28 @@ public static class ChunkProcessor
 
         try
         {
+            // start chunk i recorder (som før)
             string chunkEntryId = await recorder.StartChunkAsync(chunkFileName, options.Compression, group.Index);
 
             using var meterChunk = ResourceUsageMeter.Start();
             CompressionMethod actualChunkCompressionMethod = options.Compression;
             TimeSpan timerChunkCreateElapsed;
 
-            // ---- Inner scope: create and write the zip archive (ensure dispose before reading it) ----
+            // -----------------------------------------------------------
+            // 1) LAV ZIP-FILEN (nu med async I/O og hash i ét gennemløb)
+            // -----------------------------------------------------------
             {
                 using var timerChunkCreate = TimingScope.Start();
 
-                // Create temp zip and write entries
-                using var zipFileStream = new FileStream(tempZipPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                // temp zip-fil med async flag og stor buffer
+                await using var zipFileStream = new FileStream(
+                    tempZipPath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    bufferSize: 1_048_576,
+                    options: FileOptions.Asynchronous);
+
                 using var archive = new ZipArchive(zipFileStream, ZipArchiveMode.Create, leaveOpen: false);
 
                 foreach (var file in group.Files)
@@ -63,15 +69,37 @@ public static class ChunkProcessor
                         using var timerFileCreate = TimingScope.Start();
                         using var meterFile = ResourceUsageMeter.Start();
 
-                        using var sourceStream = new FileStream(file.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        // kildefil åbnes async
+                        await using var sourceStream = new FileStream(
+                            file.SourcePath,
+                            FileMode.Open,
+                            FileAccess.Read,
+                            FileShare.Read,
+                            bufferSize: 1_048_576,
+                            options: FileOptions.Asynchronous);
 
-                        // Compute hash directly from stream, then reset position before copy
-                        string hash = HashHelper.ComputeHash(sourceStream);
-                        sourceStream.Position = 0; // IMPORTANT: reset after hashing
-
+                        // vi laver entry som før
                         var entry = archive.CreateEntry(file.RelativePath, zipCompressionLevel);
+                        // entryStream er ikke IAsyncDisposable, så almindelig using
                         using var entryStream = entry.Open();
-                        sourceStream.CopyTo(entryStream);
+
+                        // hash i ét gennemløb mens vi skriver til zip
+                        using var sha256 = SHA256.Create();
+                        byte[] buffer = new byte[1_048_576];
+                        int read;
+                        long written = 0;
+
+                        while ((read = await sourceStream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0)
+                        {
+                            // skriv til zip
+                            await entryStream.WriteAsync(buffer.AsMemory(0, read));
+                            // pump til hash
+                            sha256.TransformBlock(buffer, 0, read, null, 0);
+                            written += read;
+                        }
+
+                        sha256.TransformFinalBlock([], 0, 0);
+                        string hash = Convert.ToHexString(sha256.Hash!).ToLowerInvariant();
 
                         DateTimeOffset fileProcessEndUtc = DateTimeOffset.UtcNow;
 
@@ -80,13 +108,14 @@ public static class ChunkProcessor
                         var meterFileResult = meterFile.Stop();
                         timerFileCreate.Stop();
 
+                        // recorder-kaldet er det samme som før
                         await recorder.RecordFileAsync(
                             chunkEntryId,
                             file.RelativePath,
                             hash,
                             CompressionMethod.None,
                             file.FileSize,
-                            file.FileSize, // (inner zip is uncompressed; outer compression happens afterward)
+                            file.FileSize,
                             file.LastWriteTimeUtc,
                             fileProcessStartUtc,
                             fileProcessEndUtc,
@@ -98,22 +127,18 @@ public static class ChunkProcessor
                     }
                     catch (FileNotFoundException)
                     {
-                        // This is expected in sync scenarios (OneDrive/Joplin)
                         reporter.Warning($"Skipped missing file '{file.SourcePath}' (file disappeared during backup).");
                     }
                     catch (UnauthorizedAccessException ex)
                     {
-                        // Separate message so vi kan se det er permissions
                         reporter.Warning($"Failed to add file '{file.SourcePath}': access denied ({ex.Message}).");
                     }
                     catch (IOException ex)
                     {
-                        // IO-fejl kan være låst fil, deling m.m.
                         reporter.Warning($"I/O error while adding file '{file.SourcePath}': {ex.Message}");
                     }
                     catch (Exception ex)
                     {
-                        // Alt andet stadig fanget
                         reporter.Error($"Failed to add file '{file.SourcePath}': {ex.Message} : {ex.StackTrace}");
                     }
                 }
@@ -121,28 +146,52 @@ public static class ChunkProcessor
                 timerChunkCreate.Stop();
                 timerChunkCreateElapsed = timerChunkCreate.Elapsed;
             }
-            // ---- end inner scope; archive/zipFileStream are disposed here ----
 
             createTime = timerChunkCreateElapsed;
 
-            // Step 2: Apply outer compression (GZip, Brotli, or Zstd) unless group is marked as non-compressible
+            // -----------------------------------------------------------
+            // 2) YDRE KOMPRIMERING (samme logik, men vi åbner streams async
+            //    og lægger selve den tunge Compress i Task.Run, så vi ikke
+            //    blokerer hele async-kæden)
+            // -----------------------------------------------------------
             using var timerChunkCompress = TimingScope.Start();
 
             originalSize = new FileInfo(tempZipPath).Length;
 
             if (group.GroupType == FileGroupType.NonCompressible || group.GroupType == FileGroupType.HugeNonCompressible)
             {
+                // bare kopi – det er fint sync
                 File.Copy(tempZipPath, outputPath, overwrite: true);
                 actualChunkCompressionMethod = CompressionMethod.None;
             }
             else
             {
-                using var zipInput = new FileStream(tempZipPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                compressor.Compress(zipInput, outStream);
+                await using var zipInput = new FileStream(
+                    tempZipPath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: 1_048_576,
+                    options: FileOptions.Asynchronous);
+
+                await using var outStream = new FileStream(
+                    outputPath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    bufferSize: 1_048_576,
+                    options: FileOptions.Asynchronous);
+
+                // selve compress er stadig sync i dine compressor-klasser,
+                // så vi kører den på threadpool for ikke at blokere caller
+                await Task.Run(() =>
+                {
+                    compressor.Compress(zipInput, outStream);
+                });
                 actualChunkCompressionMethod = options.Compression;
             }
 
+            // hash på færdigt chunk som før
             chunkHash = HashHelper.ComputeHash(outputPath);
             compressedSize = new FileInfo(outputPath).Length;
 
@@ -151,6 +200,7 @@ public static class ChunkProcessor
 
             var result = meterChunk.Stop();
 
+            // recorder-complete som før
             await recorder.CompleteChunkAsync(
                 chunkEntryId,
                 chunkHash,
@@ -170,9 +220,15 @@ public static class ChunkProcessor
         }
         finally
         {
-            // Step 3: Clean up temp file
-            try { if (File.Exists(tempZipPath)) File.Delete(tempZipPath); } catch { }
-            reporter.Debug($"Completed chunk {chunkFileName}");
+            try
+            {
+                if (File.Exists(tempZipPath))
+                    File.Delete(tempZipPath);
+            }
+            catch
+            {
+                // ignore cleanup errors
+            }
         }
     }
 }
