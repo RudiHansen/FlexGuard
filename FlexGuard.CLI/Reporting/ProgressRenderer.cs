@@ -21,9 +21,9 @@ namespace FlexGuard.CLI.Reporting
         private static readonly TimeSpan EtaClamp = TimeSpan.FromMinutes(1);
         private const double Alpha = 0.2; // weight for EMA
 
-        // --- Stats for final summary ---
         private double _avgSpeedSum;
         private int _avgSamples;
+        private bool _summaryWritten;
 
         public ProgressRenderer(BackupProgressState progress)
         {
@@ -36,63 +36,89 @@ namespace FlexGuard.CLI.Reporting
         {
             _cts.Cancel();
             try { _renderTask?.Wait(1000); } catch { /* ignore */ }
+
+            // hvis løkken allerede er røget ud pga cancel, så sørg for at vi får summary her
+            WriteFinalSummaryIfNeeded();
         }
 
         private async Task RenderLoopAsync()
         {
             int lastLines = 0;
 
-            while (!_cts.IsCancellationRequested)
+            try
             {
-                var snapshot = _progress.Snapshot();
-
-                if ((DateTimeOffset.UtcNow - _lastRender).TotalMilliseconds < 1000)
+                while (!_cts.IsCancellationRequested)
                 {
-                    await Task.Delay(200);
-                    continue;
-                }
+                    var snapshot = _progress.Snapshot();
 
-                _lastRender = DateTimeOffset.UtcNow;
-
-                lock (_lock)
-                {
-                    if (lastLines > 0)
-                        AnsiConsole.Cursor.MoveUp(lastLines);
-
-                    // --- Smooth speed + ETA ---
-                    (double smoothedSpeed, TimeSpan eta) = SmoothSpeedAndEta(
-                        snapshot.SpeedMBs, snapshot.TotalMB, snapshot.ProcessedMB);
-
-                    // Collect for average speed calc
-                    if (smoothedSpeed > 0)
+                    if ((DateTimeOffset.UtcNow - _lastRender).TotalMilliseconds < 1000)
                     {
-                        _avgSpeedSum += smoothedSpeed;
-                        _avgSamples++;
+                        await Task.Delay(200, _cts.Token);
+                        continue;
                     }
 
-                    // --- Build output ---
-                    int consoleWidth = Math.Max(40, Console.WindowWidth - 25);
-                    var bar = BuildProgressBar(snapshot.ProgressPercent, consoleWidth);
+                    _lastRender = DateTimeOffset.UtcNow;
 
-                    var lines = new[]
+                    lock (_lock)
                     {
-                        $"[grey]Progress:[/] {bar}  [yellow]{snapshot.ProgressPercent,6:F1}%[/]",
-                        $"Files: [cyan]{snapshot.ProcessedFiles:N0}[/] / [cyan]{snapshot.TotalFiles:N0}[/]",
-                        $"Data:  [cyan]{FormatSize(snapshot.ProcessedMB)}[/] / [cyan]{FormatSize(snapshot.TotalMB)}[/]",
-                        $"Chunks:[cyan]{snapshot.CompletedChunks}[/] / [cyan]{snapshot.TotalChunks}[/]",
-                        $"Speed: [green]{smoothedSpeed,6:F1} MB/s[/]   " +
-                        $"ETA: [yellow]{FormatTime(eta)}[/]   " +
-                        $"Elapsed: [grey]{FormatTime(snapshot.Elapsed)}[/]"
-                    };
+                        if (lastLines > 0)
+                            AnsiConsole.Cursor.MoveUp(lastLines);
 
-                    foreach (var line in lines)
-                        AnsiConsole.MarkupLine(line);
+                        // --- Smooth speed + ETA ---
+                        (double smoothedSpeed, TimeSpan eta) = SmoothSpeedAndEta(
+                        snapshot.SpeedMBs, snapshot.TotalMB, snapshot.ProcessedMB);
 
-                    lastLines = lines.Length;
+                        // Collect for average speed calc
+                        if (smoothedSpeed > 0)
+                        {
+                            _avgSpeedSum += smoothedSpeed;
+                            _avgSamples++;
+                        }
+
+                        // --- Build output ---
+                        int consoleWidth = Math.Max(40, Console.WindowWidth - 25);
+                        var bar = BuildProgressBar(snapshot.ProgressPercent, consoleWidth);
+
+                        var lines = new[]
+                        {
+                            $"[grey]Progress:[/] {bar}  [yellow]{snapshot.ProgressPercent,6:F1}%[/]",
+                            $"Files: [cyan]{snapshot.ProcessedFiles:N0}[/] / [cyan]{snapshot.TotalFiles:N0}[/]",
+                            $"Data:  [cyan]{FormatSize(snapshot.ProcessedMB)}[/] / [cyan]{FormatSize(snapshot.TotalMB)}[/]",
+                            $"Chunks:[cyan]{snapshot.CompletedChunks}[/] / [cyan]{snapshot.TotalChunks}[/]",
+                            $"Speed: [green]{smoothedSpeed,6:F1} MB/s[/]   " +
+                            $"ETA: [yellow]{FormatTime(eta)}[/]   " +
+                            $"Elapsed: [grey]{FormatTime(snapshot.Elapsed)}[/]"
+                        };
+
+                        foreach (var line in lines)
+                            AnsiConsole.MarkupLine(line);
+
+                        lastLines = lines.Length;
+                    }
+
+                    await Task.Delay(1000, _cts.Token);
                 }
-
-                await Task.Delay(1000, _cts.Token);
             }
+            catch (OperationCanceledException)
+            {
+                // forventet når Stop() kaldes
+            }
+            finally
+            {
+                // hvis løkken selv slutter, skriv summary her
+                WriteFinalSummaryIfNeeded();
+            }
+        }
+
+        private void WriteFinalSummaryIfNeeded()
+        {
+            // sørg for at vi kun skriver den én gang
+            if (_summaryWritten)
+            {
+                return;
+            }
+
+            _summaryWritten = true;
 
             // --- Final summary ---
             var final = _progress.Snapshot();
@@ -102,7 +128,6 @@ namespace FlexGuard.CLI.Reporting
                 ? (final.TotalMB / final.TotalChunks) / final.Elapsed.TotalSeconds
                 : 0.0;
 
-            AnsiConsole.MarkupLine("");
             AnsiConsole.MarkupLine("");
             AnsiConsole.MarkupLine("[bold yellow]Backup Summary[/]");
             AnsiConsole.MarkupLine("----------------------------------------");
@@ -116,7 +141,6 @@ namespace FlexGuard.CLI.Reporting
         }
 
         // --- Helpers ---
-
         private (double speed, TimeSpan eta) SmoothSpeedAndEta(double newSpeed, double totalMB, double processedMB)
         {
             if (!_initialized)
@@ -141,9 +165,13 @@ namespace FlexGuard.CLI.Reporting
             {
                 var diff = eta - _lastEta.Value;
                 if (diff > EtaClamp)
+                {
                     eta = _lastEta.Value + EtaClamp;
+                }
                 else if (diff < -EtaClamp)
+                {
                     eta = _lastEta.Value - EtaClamp;
+                }
             }
 
             _lastEta = eta;
@@ -160,13 +188,20 @@ namespace FlexGuard.CLI.Reporting
         private static string FormatTime(TimeSpan ts)
         {
             if (ts == TimeSpan.Zero)
+            {
                 return "--:--:--";
+            }
+
             return $"{(int)ts.TotalHours:00}:{ts.Minutes:00}:{ts.Seconds:00}";
         }
 
         private static string FormatSize(double mb)
         {
-            if (mb < 1024) return $"{mb:F1} MB";
+            if (mb < 1024)
+            {
+                return $"{mb:F1} MB";
+            }
+
             return $"{mb / 1024:F1} GB";
         }
 
