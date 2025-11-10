@@ -14,6 +14,10 @@ namespace FlexGuard.CLI.Reporting
         private DateTimeOffset _lastRender = DateTimeOffset.MinValue;
         private readonly object _lock = new();
 
+        // --- Smoothing ---
+        private readonly Queue<double> _speedSamples = new();
+        private const int MaxSamples = 5;
+
         public ProgressRenderer(BackupProgressState progress)
         {
             _progress = progress ?? throw new ArgumentNullException(nameof(progress));
@@ -22,10 +26,7 @@ namespace FlexGuard.CLI.Reporting
         /// <summary>
         /// Starts the renderer in a background task.
         /// </summary>
-        public void Start()
-        {
-            _renderTask = Task.Run(RenderLoopAsync);
-        }
+        public void Start() => _renderTask = Task.Run(RenderLoopAsync);
 
         /// <summary>
         /// Stops the renderer and waits for it to complete.
@@ -38,7 +39,6 @@ namespace FlexGuard.CLI.Reporting
 
         private async Task RenderLoopAsync()
         {
-            // Keep track of last line count so we can overwrite old output
             int lastLines = 0;
 
             while (!_cts.IsCancellationRequested)
@@ -60,8 +60,19 @@ namespace FlexGuard.CLI.Reporting
                     if (lastLines > 0)
                         AnsiConsole.Cursor.MoveUp(lastLines);
 
+                    // Smooth ETA using averaged speed
+                    double smoothedSpeed = AddAndAverageSpeed(snapshot.SpeedMBs);
+
+                    var eta = TimeSpan.Zero;
+                    if (smoothedSpeed > 0 && snapshot.ProcessedMB < snapshot.TotalMB)
+                    {
+                        double remainingMB = snapshot.TotalMB - snapshot.ProcessedMB;
+                        eta = TimeSpan.FromSeconds(remainingMB / smoothedSpeed);
+                    }
+
                     // Build formatted output
-                    var bar = BuildProgressBar(snapshot.ProgressPercent, 40);
+                    int consoleWidth = Math.Max(40, Console.WindowWidth - 25);
+                    var bar = BuildProgressBar(snapshot.ProgressPercent, consoleWidth);
 
                     var lines = new[]
                     {
@@ -69,8 +80,8 @@ namespace FlexGuard.CLI.Reporting
                         $"Files: [cyan]{snapshot.ProcessedFiles:N0}[/] / [cyan]{snapshot.TotalFiles:N0}[/]",
                         $"Data:  [cyan]{FormatSize(snapshot.ProcessedMB)}[/] / [cyan]{FormatSize(snapshot.TotalMB)}[/]",
                         $"Chunks:[cyan]{snapshot.CompletedChunks}[/] / [cyan]{snapshot.TotalChunks}[/]",
-                        $"Speed: [green]{snapshot.SpeedMBs,6:F1} MB/s[/]   " +
-                        $"ETA: [yellow]{FormatTime(snapshot.ETA)}[/]   " +
+                        $"Speed: [green]{smoothedSpeed,6:F1} MB/s[/]   " +
+                        $"ETA: [yellow]{FormatTime(eta)}[/]   " +
                         $"Elapsed: [grey]{FormatTime(snapshot.Elapsed)}[/]"
                     };
 
@@ -88,6 +99,26 @@ namespace FlexGuard.CLI.Reporting
             AnsiConsole.MarkupLine(
                 $"[green]Backup complete:[/] {final.ProgressPercent:F1}%  " +
                 $"[grey](Elapsed {FormatTime(final.Elapsed)})[/]");
+        }
+
+        // --- Helpers ---
+
+        private double AddAndAverageSpeed(double currentSpeed)
+        {
+            if (currentSpeed > 0)
+            {
+                _speedSamples.Enqueue(currentSpeed);
+                if (_speedSamples.Count > MaxSamples)
+                    _speedSamples.Dequeue();
+            }
+
+            if (_speedSamples.Count == 0)
+                return currentSpeed;
+
+            double sum = 0;
+            foreach (var s in _speedSamples)
+                sum += s;
+            return sum / _speedSamples.Count;
         }
 
         private static string BuildProgressBar(double percent, int width)
