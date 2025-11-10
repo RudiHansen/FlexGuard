@@ -10,6 +10,11 @@ namespace POC
     {
         public static async Task Main()
         {
+            await RunPerformanceMonitorTest.RunDemoAsync();
+            //TestDataFunctionality();
+        }
+        private static async void TestDataFunctionality()
+        {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             var baseDir = Path.Combine(appData, "FlexGuard");
             var jsonTestPath = Path.Combine(baseDir, "FlexTestTable.json");
@@ -36,6 +41,7 @@ namespace POC
             await FlexTestTableDemo.RunAsync(provider);
 
             Console.WriteLine("\nDone.");
+
         }
     }
 }
