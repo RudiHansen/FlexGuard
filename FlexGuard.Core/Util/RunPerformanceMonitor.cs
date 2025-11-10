@@ -7,7 +7,7 @@ namespace FlexGuard.Core.Util
     /// Monitors CPU, disk, memory, and network usage (disk and network only on Windows).
     /// Safe to include in cross-platform builds.
     /// </summary>
-    [SupportedOSPlatform("windows")] // marker hele klassen som Windows-afhængig
+    [SupportedOSPlatform("windows")]
     public sealed class RunPerformanceMonitor : IDisposable
     {
         private readonly Process _process = Process.GetCurrentProcess();
@@ -45,10 +45,9 @@ namespace FlexGuard.Core.Util
                     Debug.WriteLine($"[PerfMonitor] Counter init failed: {ex.Message}");
                 }
             }
-
-            _samplingTask = Task.Run(SampleLoop);
+                _samplingTask = Task.Run(SampleLoop);
         }
-
+        [SupportedOSPlatform("windows")]
         private async Task SampleLoop()
         {
             double lastCpuMs = _process.TotalProcessorTime.TotalMilliseconds;
