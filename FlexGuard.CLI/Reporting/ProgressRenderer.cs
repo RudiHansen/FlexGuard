@@ -21,6 +21,10 @@ namespace FlexGuard.CLI.Reporting
         private static readonly TimeSpan EtaClamp = TimeSpan.FromMinutes(1);
         private const double Alpha = 0.2; // weight for EMA
 
+        // --- Stats for final summary ---
+        private double _avgSpeedSum;
+        private int _avgSamples;
+
         public ProgressRenderer(BackupProgressState progress)
         {
             _progress = progress ?? throw new ArgumentNullException(nameof(progress));
@@ -59,6 +63,13 @@ namespace FlexGuard.CLI.Reporting
                     (double smoothedSpeed, TimeSpan eta) = SmoothSpeedAndEta(
                         snapshot.SpeedMBs, snapshot.TotalMB, snapshot.ProcessedMB);
 
+                    // Collect for average speed calc
+                    if (smoothedSpeed > 0)
+                    {
+                        _avgSpeedSum += smoothedSpeed;
+                        _avgSamples++;
+                    }
+
                     // --- Build output ---
                     int consoleWidth = Math.Max(40, Console.WindowWidth - 25);
                     var bar = BuildProgressBar(snapshot.ProgressPercent, consoleWidth);
@@ -83,10 +94,25 @@ namespace FlexGuard.CLI.Reporting
                 await Task.Delay(1000, _cts.Token);
             }
 
+            // --- Final summary ---
             var final = _progress.Snapshot();
-            AnsiConsole.MarkupLine(
-                $"[green]Backup complete:[/] {final.ProgressPercent:F1}%  " +
-                $"[grey](Elapsed {FormatTime(final.Elapsed)})[/]");
+            double avgSpeed = _avgSamples > 0 ? _avgSpeedSum / _avgSamples : 0.0;
+            double totalGB = final.TotalMB / 1024.0;
+            double avgChunkSpeed = final.TotalChunks > 0
+                ? (final.TotalMB / final.TotalChunks) / final.Elapsed.TotalSeconds
+                : 0.0;
+
+            AnsiConsole.MarkupLine("");
+            AnsiConsole.MarkupLine("");
+            AnsiConsole.MarkupLine("[bold yellow]Backup Summary[/]");
+            AnsiConsole.MarkupLine("----------------------------------------");
+
+            AnsiConsole.MarkupLine($"[green]Backup complete:[/] {final.ProgressPercent:F1}%");
+            AnsiConsole.MarkupLine($"[grey]Total time:[/] {FormatTime(final.Elapsed)}");
+            AnsiConsole.MarkupLine($"[grey]Total data:[/] {totalGB:F1} GB");
+            AnsiConsole.MarkupLine($"[grey]Average speed:[/] [green]{avgSpeed:F1} MB/s[/]");
+            AnsiConsole.MarkupLine($"[grey]Per-chunk average:[/] [cyan]{avgChunkSpeed * 1024:F1} MB/s[/]");
+            AnsiConsole.MarkupLine("");
         }
 
         // --- Helpers ---
