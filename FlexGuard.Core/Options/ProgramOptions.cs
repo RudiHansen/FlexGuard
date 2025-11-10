@@ -7,7 +7,7 @@ public class ProgramOptions
     public string JobName { get; }
     public OperationMode Mode { get; }
 
-    public int MaxFilesPerGroup { get; init; } = 1000;
+    public int MaxFilesPerGroup { get; init; } = 0;
     public long MaxBytesPerGroup { get; init; } = 1024 * 1024 * 1024; // 1 Gb
     public int MaxParallelTasks { get; init; } = 8;
     public bool EnableCompressionRatioMeasurement { get; init; } = false;

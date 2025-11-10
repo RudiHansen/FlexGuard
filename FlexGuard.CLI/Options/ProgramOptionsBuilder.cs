@@ -7,7 +7,7 @@ public class ProgramOptionsBuilder
 {
     public string JobName { get; set; } = "DefaultJob";
     public OperationMode Mode { get; set; } = OperationMode.FullBackup;
-    public int MaxFilesPerGroup { get; set; } = 1000;
+    public int MaxFilesPerGroup { get; set; } = 0;
     public long MaxBytesPerGroup { get; set; } = 1024 * 1024 * 1024; // 1 GB
     public int MaxParallelTasks { get; set; } = 8;
     public bool EnableCompressionRatioMeasurement { get; set; } = false;

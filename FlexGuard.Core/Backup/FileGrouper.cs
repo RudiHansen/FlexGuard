@@ -12,6 +12,9 @@ public static class FileGrouper
         var result = new List<FileGroup>();
         int groupIndex = 0;
 
+        // 0 betyder "ingen fil-begrænsning"
+        bool limitFiles = maxFilesPerGroup > 0;
+
         // Group files by GroupType
         var groupedByType = files.GroupBy(f => f.GroupType);
         foreach (var typeGroup in groupedByType)
@@ -21,7 +24,7 @@ public static class FileGrouper
 
             foreach (var file in typeGroup)
             {
-                bool exceedsFileLimit = currentFiles.Count >= maxFilesPerGroup;
+                bool exceedsFileLimit = limitFiles && currentFiles.Count >= maxFilesPerGroup;
                 bool exceedsSizeLimit = currentSize + file.FileSize > maxBytesPerGroup;
 
                 if ((exceedsFileLimit || exceedsSizeLimit) && currentFiles.Count > 0)
