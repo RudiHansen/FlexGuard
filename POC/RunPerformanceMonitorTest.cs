@@ -11,27 +11,32 @@ namespace POC
         /// </summary>
         public static async Task RunDemoAsync()
         {
-            Console.WriteLine("Starting RunPerformanceMonitor test...");
-            using var monitor = new RunPerformanceMonitor();
+            if(OperatingSystem.IsWindows())
+            { 
+                Console.WriteLine("Starting RunPerformanceMonitor test...");
+                using var monitor = new RunPerformanceMonitor();
 
-            // CPU + Memory + Disk simulation
-            var cpuTask = SimulateCpuLoadAsync(20);
-            var cpuTask2 = SimulateCpuLoadAsync(20);
-            var memTask = SimulateMemoryLoadAsync(20);
-            var diskTask = SimulateDiskWriteAsync(20);
+                // CPU + Memory + Disk simulation
+                var cpuTask = SimulateCpuLoadAsync(20);
+                var memTask = SimulateMemoryLoadAsync(20);
+                var diskTask = SimulateDiskWriteAsync(20);
+                var netDiskTask = SimulateNetDiskWriteAsync(20);
 
-            await Task.WhenAll(cpuTask, cpuTask, memTask, diskTask);
+                await Task.WhenAll(cpuTask, memTask, diskTask, netDiskTask);
 
-            var (CpuAvg, CpuMax, DiskAvg, DiskMax, MemMax) = monitor.Stop();
+                var (CpuAvg, CpuMax, DiskAvg, DiskMax, NetAvg, NetMax, MemMax) = monitor.Stop();
 
-            Console.WriteLine();
-            Console.WriteLine("==== RunPerformanceMonitor Test Results ====");
-            Console.WriteLine($"CPU avg:   {CpuAvg:F1}%");
-            Console.WriteLine($"CPU max:   {CpuMax:F1}%");
-            Console.WriteLine($"Disk avg:  {DiskAvg:F1} MB/s");
-            Console.WriteLine($"Disk max:  {DiskMax:F1} MB/s");
-            Console.WriteLine($"Mem max:   {MemMax} MB");
-            Console.WriteLine("============================================");
+                Console.WriteLine();
+                Console.WriteLine("==== RunPerformanceMonitor Test Results ====");
+                Console.WriteLine($"CPU avg:   {CpuAvg:F1}%");
+                Console.WriteLine($"CPU max:   {CpuMax:F1}%");
+                Console.WriteLine($"Disk avg:  {DiskAvg:F1} MB/s");
+                Console.WriteLine($"Disk max:  {DiskMax:F1} MB/s");
+                Console.WriteLine($"Net avg:   {NetAvg:F1} MB/s");
+                Console.WriteLine($"Net max:   {NetMax:F1} MB/s");
+                Console.WriteLine($"Mem max:   {MemMax} MB");
+                Console.WriteLine("============================================");
+            }
         }
 
         private static async Task SimulateCpuLoadAsync(int seconds)
@@ -85,5 +90,25 @@ namespace POC
 
             File.Delete(tempFile);
         }
+        private static async Task SimulateNetDiskWriteAsync(int seconds)
+        {
+            string tempFile = Path.Combine(@"G:\FlexGuard", "FlexGuardPerfTest.tmp");
+            var data = new byte[4 * 1024 * 1024]; // 4 MB buffer
+            new Random().NextBytes(data);
+
+            await Task.Run(() =>
+            {
+                var sw = Stopwatch.StartNew();
+                using var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None);
+                while (sw.Elapsed < TimeSpan.FromSeconds(seconds))
+                {
+                    fs.Write(data, 0, data.Length);
+                    fs.Flush();
+                }
+            });
+
+            File.Delete(tempFile);
+        }
+
     }
 }
