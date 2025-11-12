@@ -19,7 +19,12 @@ namespace FlexGuard.Data.Repositories.Json
             try { return (await ReadAsync(ct)).ToImmutableArray(); }
             finally { _gate.Release(); }
         }
-
+        public async Task<List<FlexBackupChunkEntry>> GetByBackupEntryIdAsync(string backupEntryId, CancellationToken ct = default)
+        {
+            await _gate.WaitAsync(ct);
+            try { return (await ReadAsync(ct)).Where(x => x.BackupEntryId == backupEntryId).ToList(); }
+            finally { _gate.Release(); }
+        }
         public async Task<FlexBackupChunkEntry?> GetByIdAsync(string chunkEntryId, CancellationToken ct = default)
         {
             await _gate.WaitAsync(ct);

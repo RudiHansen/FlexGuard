@@ -3,6 +3,8 @@ using FlexGuard.Core.Compression;
 using FlexGuard.Core.Models;
 using FlexGuard.Core.Options;
 using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace FlexGuard.Core.Recording
 {
@@ -28,6 +30,7 @@ namespace FlexGuard.Core.Recording
 
         // --- Current run state ---
         private string? _currentBackupEntryId;
+        private string? _exportBackupEntryId;
         private FlexBackupEntry? _currentBackupEntry;
         private DateTimeOffset _runStartUtc;
 
@@ -103,6 +106,7 @@ namespace FlexGuard.Core.Recording
 
                 _currentBackupEntryId = entry.BackupEntryId;
                 _currentBackupEntry = entry;
+                _exportBackupEntryId = entry.BackupEntryId;
             }
 
             // DB-call udenfor låsen
@@ -365,17 +369,67 @@ namespace FlexGuard.Core.Recording
         {
             return await _backupEntryStore.GetLastJobRunTime(jobName);
         }
-
-        /// <summary>
-        /// Old helper – now only used in a couple of places.
-        /// </summary>
-        private void EnsureRunActive()
+        public async Task<string> ExportManifestAsync(
+            string destinationFolder,
+            string? backupEntryId = null,
+            CancellationToken ct = default)
         {
-            // behold som “hard” check til nogle steder
-            if (!IsRunActive())
-                throw new InvalidOperationException("No active backup run. Did you call StartRunAsync()?");
-        }
+            string id = backupEntryId ?? _exportBackupEntryId  ?? throw new InvalidOperationException("Der er ikke noget aktivt BackupEntryId at eksportere.");
 
+            // Sørg for at mappen findes
+            Directory.CreateDirectory(destinationFolder);
+
+            // Hent data for run'et
+            var entry = await _backupEntryStore.GetByIdAsync(id, ct) ?? throw new InvalidOperationException($"BackupEntryId {id} not found.");
+            var chunks = await _chunkEntryStore.GetByBackupEntryIdAsync(id, ct) ?? new List<FlexBackupChunkEntry>();
+            var files = await _fileEntryStore.GetBybackupEntryIdAsync(id, ct) ?? new List<FlexBackupFileEntry>();
+
+            // Byg manifest
+            var manifest = new BackupManifest
+            {
+                ManifestVersion = 1,
+                CreatedOnUtc = DateTimeOffset.UtcNow,
+                CreatedBy = $"FlexGuard {ThisVersionStringOrAssemblyVersion()}",
+                BackupEntry = entry,
+                Chunks = chunks,
+                Files = files
+            };
+
+            // Skriv til fil i backupmappen
+            var manifestPath = Path.Combine(destinationFolder, "backup_manifest.json");
+            await using (var fs = new FileStream(manifestPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                await JsonSerializer.SerializeAsync(fs, manifest, GetJsonOptions(), ct);
+                await fs.FlushAsync(ct);
+            }
+
+            return manifestPath;
+        }
+        public static JsonSerializerOptions GetJsonOptions()
+        {
+            return new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                Converters =
+        {
+            new JsonStringEnumConverter()
+        }
+            };
+        }
+        // Hjælper til "CreatedBy"
+        private static string ThisVersionStringOrAssemblyVersion()
+        {
+            try
+            {
+                var asm = typeof(BackupRunRecorder).Assembly.GetName();
+                return $"{asm.Name} v{asm.Version}";
+            }
+            catch
+            {
+                return "FlexGuard";
+            }
+        }
         private bool IsRunActive()
         {
             lock (_stateLock)
@@ -383,12 +437,10 @@ namespace FlexGuard.Core.Recording
                 return IsRunActiveUnsafe();
             }
         }
-
         private bool IsRunActiveUnsafe()
         {
             return _runActiveFlag == 1 && !_isClosing && _currentBackupEntryId != null;
         }
-
         public string? GetCurrentBackupEntryId()
         {
             lock (_stateLock)

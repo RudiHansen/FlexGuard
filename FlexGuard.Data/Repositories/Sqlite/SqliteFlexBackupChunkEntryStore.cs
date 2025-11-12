@@ -53,6 +53,30 @@ namespace FlexGuard.Data.Repositories.Sqlite
                 new CommandDefinition(sql, cancellationToken: ct));
             return rows.ToList();
         }
+        public async Task<List<FlexBackupChunkEntry>> GetByBackupEntryIdAsync(string backupId, CancellationToken ct = default)
+        {
+            await EnsureSchemaAsync(ct);
+            using var conn = await OpenAsync(ct);
+
+            var sql = """
+                      SELECT ChunkEntryId, BackupEntryId,
+                             CompressionMethod,
+                             Status, StatusMessage,
+                             StartDateTimeUtc, EndDateTimeUtc,
+                             RunTimeMs, CreateTimeMs, CompressTimeMs,
+                             ChunkFileName, ChunkHash,
+                             FileSize, FileSizeCompressed,
+                             CpuTimeMs, CpuPercent,
+                             MemoryStart, MemoryEnd
+                      FROM FlexBackupChunkEntry
+                      WHERE BackupEntryId=@BackupEntryId
+                      ORDER BY ChunkEntryId;
+                      """;
+
+            var rows = await conn.QueryAsync<FlexBackupChunkEntry>(
+                new CommandDefinition(sql, new { BackupEntryId = backupId }, cancellationToken: ct));
+            return rows.ToList();
+        }
 
         public async Task<FlexBackupChunkEntry?> GetByIdAsync(string chunkEntryId, CancellationToken ct = default)
         {

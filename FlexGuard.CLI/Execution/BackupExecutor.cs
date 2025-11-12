@@ -95,6 +95,7 @@ public static class BackupExecutor
         renderer.Stop();
 
         await recorder.CompleteRunAsync(RunStatus.Completed);
+        await recorder.ExportManifestAsync(backupFolderPath);
 
         reporter.Success("Backup process completed successfully.");
     }
