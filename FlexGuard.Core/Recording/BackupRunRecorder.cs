@@ -405,6 +405,69 @@ namespace FlexGuard.Core.Recording
 
             return manifestPath;
         }
+        public async Task<bool> ImportManifestAsync(string manifestPath, CancellationToken ct = default)
+        {
+            if (!File.Exists(manifestPath))
+                throw new FileNotFoundException($"Manifest file not found: {manifestPath}");
+
+            await using var fs = File.OpenRead(manifestPath);
+            var manifest = await JsonSerializer.DeserializeAsync<BackupManifest>(fs, GetJsonOptions(), ct)
+                           ?? throw new InvalidDataException("Manifest could not be deserialized.");
+
+            // Versionscheck – vi understøtter v1
+            if (manifest.ManifestVersion > 1)
+                throw new NotSupportedException($"Manifest version {manifest.ManifestVersion} is not supported.");
+
+            var entry = manifest.BackupEntry ?? throw new InvalidDataException("Manifest is missing BackupEntry.");
+            var backupEntryId = entry.BackupEntryId;
+
+            // Tidligt exit hvis run allerede findes
+            var existing = await _backupEntryStore.GetByIdAsync(backupEntryId, ct);
+            if (existing != null)
+            {
+                // allerede importeret – intet at gøre
+                return false;
+            }
+
+            // Sørg for at schemaer er der (idempotent)
+            //await _backupEntryStore.EnsureSchemaAsync(ct);
+            //await _chunkEntryStore.EnsureSchemaAsync(ct);
+            //await _fileEntryStore.EnsureSchemaAsync(ct);
+
+            // 1) Insert BackupEntry
+            await _backupEntryStore.InsertAsync(entry, ct);
+
+            // 2) Insert ChunkEntries (spring over hvis eksisterer)
+            if (manifest.Chunks != null)
+            {
+                foreach (var chunk in manifest.Chunks)
+                {
+                    // bruger samme navngivning som dine stores/recorder
+                    var chunkExisting = await _chunkEntryStore.GetByIdAsync(chunk.ChunkEntryId, ct);
+                    if (chunkExisting == null)
+                    {
+                        await _chunkEntryStore.InsertAsync(chunk, ct);
+                    }
+                }
+            }
+
+            // 3) Insert FileEntries (spring over hvis eksisterer)
+            if (manifest.Files != null)
+            {
+                foreach (var file in manifest.Files)
+                {
+                    // Forventer at fil-store har GetByIdAsync ligesom de andre; hvis ikke,
+                    // kan du skifte til et passende "exists"-kald i din store-klasse.
+                    var fileExisting = await _fileEntryStore.GetByIdAsync(file.FileEntryId, ct);
+                    if (fileExisting == null)
+                    {
+                        await _fileEntryStore.InsertAsync(file, ct);
+                    }
+                }
+            }
+
+            return true;
+        }
         public static JsonSerializerOptions GetJsonOptions()
         {
             return new JsonSerializerOptions

@@ -12,6 +12,7 @@ public class ProgramOptionsBuilder
     public int MaxParallelTasks { get; set; } = 8;
     public bool EnableCompressionRatioMeasurement { get; set; } = false;
     public CompressionMethod Compression { get; set; } = CompressionMethod.Zstd;
+    public string ImportBackupDataPath { get; set; } = "";
 
     public ProgramOptions Build()
     {
@@ -24,7 +25,8 @@ public class ProgramOptionsBuilder
             MaxBytesPerGroup,
             maxParallel,
             EnableCompressionRatioMeasurement,
-            Compression
+            Compression,
+            ImportBackupDataPath
         );
     }
 }

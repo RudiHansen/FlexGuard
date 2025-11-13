@@ -23,6 +23,12 @@ public static class CliEntrypoint
         ProgramOptions? options = ProgramOptionsParser.Parse(args, reporter);
         if (options == null) return;
 
+        if (options.Mode == OperationMode.ImportBackupData)
+        {
+            await ImportExecutor.RunAsync(options, reporter);
+            return;
+        }
+
         var jobConfig = JobLoader.Load(options.JobName);
 
         switch (options.Mode)

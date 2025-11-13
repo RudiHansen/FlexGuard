@@ -3,6 +3,7 @@ using FlexGuard.Core.Options;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 using System.Globalization;
+using System.Runtime.Intrinsics.X86;
 
 namespace FlexGuard.CLI.Options;
 
@@ -61,6 +62,11 @@ public static class ProgramOptionsParser
                         };
                         break;
 
+                    case "import-backupdata":
+                        options.Mode = OperationMode.ImportBackupData;
+                        options.ImportBackupDataPath = ParseString(value, "--import-backupdata", true);
+                        break;
+
                     case "maxfiles":
                         options.MaxFilesPerGroup = ParseInt(value, "--maxfiles");
                         break;
@@ -110,12 +116,25 @@ public static class ProgramOptionsParser
             return result;
         throw new ArgumentException($"Invalid number for {argName}: {value}");
     }
+    private static string ParseString(string? value, string argName, bool mustExist = false)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException($"Missing value for {argName}.");
+
+        var s = value.Trim().Trim('"');
+
+        if (mustExist && !File.Exists(s))
+            throw new FileNotFoundException($"File not found for {argName}: {s}", s);
+
+        return s;
+    }
 
     private static void ShowHelp(IMessageReporter reporter)
     {
         reporter.Info("FlexGuard Backup Tool - Options:");
         reporter.WriteRaw("  --jobname <name>                  Name of the backup job.");
         reporter.WriteRaw("  --mode <full|diff|restore>        Operation mode (Full, Differential, or Restore).");
+        reporter.WriteRaw("  --import - backupdata < sti >     Importér backupdata/ manifest fra fil(fx backup_manifest.json)");
         reporter.WriteRaw("  --maxfiles <int>                  Max files per group (default: 1000).");
         reporter.WriteRaw("  --max-parallel-tasks <int>        Max parallel tasks to run (default: 8).");
         reporter.WriteRaw("  --maxbytes <long>                 Max bytes per group (default: 1GB).");
