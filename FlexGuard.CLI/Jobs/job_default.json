@@ -11,5 +11,13 @@
     }
   ],
   "DestinationPath": "",
-  "RestoreTargetFolder": ""
+  "RestoreTargetFolder": "",
+  "Remote": {
+    "Enabled": false,
+    "Host": "",
+    "Port": 22,
+    "Username": "",
+    "PrivateKeyPath": "",
+    "RemotePath": ""
+  }
 }
