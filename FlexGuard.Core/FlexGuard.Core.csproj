@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="NUlid" Version="1.7.3" />
+    <PackageReference Include="SSH.NET" Version="2025.1.0" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.10" />
     <PackageReference Include="System.Windows.Extensions" Version="9.0.7" />
     <PackageReference Include="ZstdSharp.Port" Version="0.8.6" />

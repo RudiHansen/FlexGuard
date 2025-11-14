@@ -3,7 +3,6 @@ using FlexGuard.Core.Options;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 using System.Globalization;
-using System.Runtime.Intrinsics.X86;
 
 namespace FlexGuard.CLI.Options;
 

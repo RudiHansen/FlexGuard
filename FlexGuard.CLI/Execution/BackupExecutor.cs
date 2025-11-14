@@ -8,7 +8,6 @@ using FlexGuard.Core.Recording;
 using FlexGuard.Core.Reporting;
 using FlexGuard.Core.Util;
 using Spectre.Console;
-using System.Threading.Tasks;
 
 namespace FlexGuard.CLI.Execution;
 
@@ -96,6 +95,12 @@ public static class BackupExecutor
 
         await recorder.CompleteRunAsync(RunStatus.Completed);
         await recorder.ExportManifestAsync(backupFolderPath);
+
+        if (jobConfig.Remote is { Enabled: true })
+        {
+            var uploader = new RemoteSshFileStore(jobConfig, reporter);
+            await uploader.UploadBackupFolderAsync(backupFolderPath);
+        }
 
         reporter.Success("Backup process completed successfully.");
     }
